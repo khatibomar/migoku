@@ -1,5 +1,5 @@
 services:
-  migakustat:
+  migoku:
     build:
       context: .
       args:
@@ -11,7 +11,7 @@ services:
         - API_SECRET=${API_SECRET}
         - CORS_ORIGINS=${CORS_ORIGINS}
         - CACHE_TTL=${CACHE_TTL}
-    container_name: migakustat
+    container_name: migoku
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
     environment:

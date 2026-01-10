@@ -1,6 +1,6 @@
-[![go](https://github.com/khatibomar/migakustat/actions/workflows/go.yml/badge.svg)](https://github.com/khatibomar/migakustat/actions/workflows/go.yml)
+[![go](https://github.com/khatibomar/migoku/actions/workflows/go.yml/badge.svg)](https://github.com/khatibomar/migoku/actions/workflows/go.yml)
 
-# Migaku API
+# Migoku
 
 A Go HTTP server that provides REST API access to Migaku's local IndexedDB data with browser automation and caching.
 

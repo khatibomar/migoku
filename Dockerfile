@@ -5,7 +5,7 @@ RUN apk add --no-cache git ca-certificates
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o migakustat .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o migoku .
 
 #### Runtime stage
 FROM alpine:latest
@@ -23,7 +23,7 @@ RUN addgroup -g 1000 app && \
 
 WORKDIR /app
 
-COPY --from=builder /app/migakustat .
+COPY --from=builder /app/migoku .
 COPY --from=builder /app/example ./example
 
 ENV CHROME_BIN=/usr/bin/chromium-browser \
@@ -57,4 +57,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/api/status || exit 1
 
-CMD ["./migakustat"]
+CMD ["./migoku"]

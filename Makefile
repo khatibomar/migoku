@@ -2,24 +2,24 @@
 
 # Run the API server
 run:
-	@echo "Starting Migaku Stats API Server..."
+	@echo "Starting Migoku API Server..."
 	go run .
 
 # Build the server binary
 build:
-	@echo "Building migakustat..."
-	go build -o bin/migakustat
-	@echo "Binary created: migakustat"
+	@echo "Building migoku..."
+	go build -o bin/migoku
+	@echo "Binary created: migoku"
 
 # Run with Docker Compose
 docker-run:
-	@echo "Starting Migaku Stats API Server with Docker..."
+	@echo "Starting Migoku API Server with Docker..."
 	docker compose up --build
 
 # Clean build artifacts
 clean:
 	@echo "Cleaning..."
-	rm -f migaku-server
+	rm -f migoku
 
 # Run linting
 lint:

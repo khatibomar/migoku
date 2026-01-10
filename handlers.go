@@ -304,7 +304,7 @@ func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
 	html := `<!DOCTYPE html>
 <html>
 <head>
-    <title>Migaku Stats API</title>
+    <title>Migoku API</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
         h1 { color: #333; }
@@ -314,7 +314,7 @@ func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
     </style>
 </head>
 <body>
-    <h1>Migaku Stats API</h1>
+    <h1>Migoku API</h1>
     <p>Access Migaku database through REST API with in-memory caching</p>
     
     <h2>Available Endpoints:</h2>
