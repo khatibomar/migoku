@@ -125,15 +125,15 @@ func realMain(logger *slog.Logger) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", chainMiddlewares(app.handleRoot, app.corsMiddleware))
-	mux.HandleFunc("/api/status", chainMiddlewares(app.handleStatus, app.corsMiddleware))
+	mux.HandleFunc("GET /api/status", chainMiddlewares(app.handleStatus, app.corsMiddleware))
 
 	v1 := http.NewServeMux()
-	v1.HandleFunc("/words/all", chainMiddlewares(app.handleWordsAll, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("/words/known", chainMiddlewares(app.handleWordsKnown, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("/words/learning", chainMiddlewares(app.handleWordsLearning, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("/decks", chainMiddlewares(app.handleDecks, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("/status/counts", chainMiddlewares(app.handleStatusCounts, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("/tables", chainMiddlewares(app.handleTables, app.corsMiddleware, app.authMiddleware))
+	v1.HandleFunc("GET /words/all", chainMiddlewares(app.handleWordsAll, app.corsMiddleware, app.authMiddleware))
+	v1.HandleFunc("GET /words/known", chainMiddlewares(app.handleWordsKnown, app.corsMiddleware, app.authMiddleware))
+	v1.HandleFunc("GET /words/learning", chainMiddlewares(app.handleWordsLearning, app.corsMiddleware, app.authMiddleware))
+	v1.HandleFunc("GET /decks", chainMiddlewares(app.handleDecks, app.corsMiddleware, app.authMiddleware))
+	v1.HandleFunc("GET /status/counts", chainMiddlewares(app.handleStatusCounts, app.corsMiddleware, app.authMiddleware))
+	v1.HandleFunc("GET /tables", chainMiddlewares(app.handleTables, app.corsMiddleware, app.authMiddleware))
 
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
 

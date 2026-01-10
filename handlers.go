@@ -201,6 +201,16 @@ func (app *Application) handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, err := w.Write([]byte(`{"error": "endpoint not found", "message": "The requested endpoint does not exist"}`))
+		if err != nil {
+			app.logger.Error("Failed to write 404 response", "error", err)
+		}
+		return
+	}
+
 	html := `<!DOCTYPE html>
 <html>
 <head>
