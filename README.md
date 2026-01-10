@@ -19,9 +19,6 @@ So that's why I built this project as a way to have an API that we can build coo
 ## Quick Start
 
 ```bash
-# Install dependencies
-make install
-
 # Set credentials (optional, for auto-login)
 export EMAIL="your@email.com"
 export PASSWORD="yourpassword"
