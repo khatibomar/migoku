@@ -65,15 +65,29 @@ func (app *Application) respondJSON(w http.ResponseWriter, data any) {
 }
 
 func (app *Application) handleWordsAll(w http.ResponseWriter, r *http.Request) {
-	cacheKey := "words:all"
+	lang := r.URL.Query().Get("lang")
+	cacheKey := "words:all:"
+	if lang == "" {
+		cacheKey += "all"
+	} else {
+		cacheKey += lang
+	}
+
 	if cached, ok := app.cache.Get(cacheKey); ok {
 		app.logger.Info("Serving from cache", "key", cacheKey)
 		app.respondJSON(w, cached)
 		return
 	}
 
-	query := "SELECT dictForm, secondary, knownStatus FROM wordHistory LIMIT 10000;"
-	data, err := app.runQuery(query)
+	var data []map[string]any
+	var err error
+
+	if lang != "" {
+		data, err = app.runQuery("SELECT dictForm, secondary, knownStatus FROM wordHistory WHERE language = ? LIMIT 10000;", lang)
+	} else {
+		data, err = app.runQuery("SELECT dictForm, secondary, knownStatus FROM wordHistory LIMIT 10000;")
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -84,15 +98,29 @@ func (app *Application) handleWordsAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) handleWordsKnown(w http.ResponseWriter, r *http.Request) {
-	cacheKey := "words:known"
+	lang := r.URL.Query().Get("lang")
+	cacheKey := "words:known:"
+	if lang == "" {
+		cacheKey += "all"
+	} else {
+		cacheKey += lang
+	}
+
 	if cached, ok := app.cache.Get(cacheKey); ok {
 		app.logger.Info("Serving from cache", "key", cacheKey)
 		app.respondJSON(w, cached)
 		return
 	}
 
-	query := "SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'KNOWN';"
-	data, err := app.runQuery(query)
+	var data []map[string]any
+	var err error
+
+	if lang != "" {
+		data, err = app.runQuery("SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'KNOWN' AND language = ?;", lang)
+	} else {
+		data, err = app.runQuery("SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'KNOWN';")
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -103,15 +131,29 @@ func (app *Application) handleWordsKnown(w http.ResponseWriter, r *http.Request)
 }
 
 func (app *Application) handleWordsLearning(w http.ResponseWriter, r *http.Request) {
-	cacheKey := "words:learning"
+	lang := r.URL.Query().Get("lang")
+	cacheKey := "words:learning:"
+	if lang == "" {
+		cacheKey += "all"
+	} else {
+		cacheKey += lang
+	}
+
 	if cached, ok := app.cache.Get(cacheKey); ok {
 		app.logger.Info("Serving from cache", "key", cacheKey)
 		app.respondJSON(w, cached)
 		return
 	}
 
-	query := "SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'LEARNING';"
-	data, err := app.runQuery(query)
+	var data []map[string]any
+	var err error
+
+	if lang != "" {
+		data, err = app.runQuery("SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'LEARNING' AND language = ?;", lang)
+	} else {
+		data, err = app.runQuery("SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'LEARNING';")
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -141,17 +183,25 @@ func (app *Application) handleDecks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) handleStatusCounts(w http.ResponseWriter, r *http.Request) {
+	lang := r.URL.Query().Get("lang")
 	deckID := r.URL.Query().Get("deckId")
 
 	var cacheKey string
-	var query string
 
 	if deckID == "" {
-		cacheKey = "status:counts:all"
-		query = "SELECT knownStatus, COUNT(*) as count FROM wordHistory GROUP BY knownStatus;"
+		cacheKey = "status:counts:all:"
+		if lang == "" {
+			cacheKey += "all"
+		} else {
+			cacheKey += lang
+		}
 	} else {
-		cacheKey = "status:counts:deck:" + deckID
-		query = "SELECT knownStatus, COUNT(*) as count FROM wordHistory WHERE deckId = " + deckID + " GROUP BY knownStatus;"
+		cacheKey = "status:counts:deck:" + deckID + ":"
+		if lang == "" {
+			cacheKey += "all"
+		} else {
+			cacheKey += lang
+		}
 	}
 
 	if cached, ok := app.cache.Get(cacheKey); ok {
@@ -160,7 +210,23 @@ func (app *Application) handleStatusCounts(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	data, err := app.runQuery(query)
+	var data []map[string]any
+	var err error
+
+	if deckID == "" {
+		if lang != "" {
+			data, err = app.runQuery("SELECT knownStatus, COUNT(*) as count FROM wordHistory WHERE language = ? GROUP BY knownStatus;", lang)
+		} else {
+			data, err = app.runQuery("SELECT knownStatus, COUNT(*) as count FROM wordHistory GROUP BY knownStatus;")
+		}
+	} else {
+		if lang != "" {
+			data, err = app.runQuery("SELECT knownStatus, COUNT(*) as count FROM wordHistory WHERE deckId = ? AND language = ? GROUP BY knownStatus;", deckID, lang)
+		} else {
+			data, err = app.runQuery("SELECT knownStatus, COUNT(*) as count FROM wordHistory WHERE deckId = ? GROUP BY knownStatus;", deckID)
+		}
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -231,17 +297,20 @@ func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
     
     <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/words/all</code><br>
-        Get all words with their status
+        Get all words with their status<br>
+        Query: <code>?lang=ja</code> (optional, filter by language)
     </div>
     
     <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/words/known</code><br>
-        Get all known words
+        Get all known words<br>
+        Query: <code>?lang=ja</code> (optional, filter by language)
     </div>
     
     <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/words/learning</code><br>
-        Get all learning words
+        Get all learning words<br>
+        Query: <code>?lang=ja</code> (optional, filter by language)
     </div>
     
     <div class="endpoint">
@@ -251,8 +320,8 @@ func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
     
     <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/status/counts</code><br>
-        Get status count breakdown (all decks or filtered by deck)<br>
-        Query: <code>?deckId=123</code> (optional)
+        Get status count breakdown (all decks or filtered by deck and language)<br>
+        Query: <code>?deckId=123&lang=ja</code> (both optional)
     </div>
     
     <div class="endpoint">

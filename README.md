@@ -59,5 +59,7 @@ make docker-run
 ## Upcoming
 
 - rate limiting
+- paginating
 - more endpoints
 - refactoring
+- bug fixes as they occur

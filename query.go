@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -8,14 +9,23 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func (app *Application) runQuery(query string) ([]map[string]any, error) {
+func (app *Application) runQuery(query string, params ...any) ([]map[string]any, error) {
 	isAuth := app.isAuthenticated.Load()
 
 	if !isAuth {
 		return nil, errors.New("browser not authenticated")
 	}
 
-	app.logger.Info("Running query", "query", query)
+	app.logger.Info("Running query", "query", query, "params", params)
+
+	paramsJSON := "[]"
+	if len(params) > 0 {
+		paramsBytes, err := json.Marshal(params)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal params: %w", err)
+		}
+		paramsJSON = string(paramsBytes)
+	}
 
 	script := fmt.Sprintf(`
 (async function() {
@@ -88,27 +98,52 @@ func (app *Application) runQuery(query string) ([]map[string]any, error) {
     
     const db = new SQL.Database(decompressed);
     
-    // Run the query
+    // Run the query with parameters
     const query = %s;
-    const result = db.exec(query);
+    const params = %s;
     
-    if (!result.length) return [];
-    
-    const rows = result[0].values;
-    const columns = result[0].columns;
-    
-    const jsonResult = rows.map(row => {
-        let obj = {};
-        columns.forEach((col, index) => {
-            obj[col] = row[index];
+    let result;
+    if (params.length > 0) {
+        const stmt = db.prepare(query);
+        stmt.bind(params);
+        
+        const columns = stmt.getColumnNames();
+        const jsonResult = [];
+        
+        while (stmt.step()) {
+            const row = stmt.get();
+            let obj = {};
+            columns.forEach((col, index) => {
+                obj[col] = row[index];
+            });
+            jsonResult.push(obj);
+        }
+        stmt.free();
+        result = jsonResult;
+    } else {
+        const execResult = db.exec(query);
+        
+        if (!execResult.length) {
+            db.close();
+            return [];
+        }
+        
+        const rows = execResult[0].values;
+        const columns = execResult[0].columns;
+        
+        result = rows.map(row => {
+            let obj = {};
+            columns.forEach((col, index) => {
+                obj[col] = row[index];
+            });
+            return obj;
         });
-        return obj;
-    });
+    }
     
     db.close();
-    return jsonResult;
+    return result;
 })()
-`, "`"+query+"`")
+`, "`"+query+"`", paramsJSON)
 
 	var result []map[string]any
 

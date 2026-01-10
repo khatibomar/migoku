@@ -209,7 +209,7 @@
     <script>
         async function fetchStats() {
             try {
-                const response = await fetch('http://localhost:8080/api/v1/status/counts');
+                const response = await fetch('http://localhost:8080/api/v1/status/counts?lang=ja');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
