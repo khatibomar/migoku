@@ -66,3 +66,4 @@ make docker-run
 - more endpoints
 - refactoring
 - bug fixes as they occur
+- tests

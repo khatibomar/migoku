@@ -33,7 +33,7 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 		allocCancel()
 	}
 
-	app.logger.Info("   Navigating to login page...")
+	app.logger.Info("Navigating to login page...")
 	err := chromedp.Run(loginCtx,
 		chromedp.Navigate("https://study.migaku.com/login"),
 		chromedp.WaitVisible(`input[type="email"]`, chromedp.ByQuery),
@@ -42,7 +42,7 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 		return nil, cleanFunc, err
 	}
 
-	app.logger.Info("   Filling in credentials...")
+	app.logger.Info("Filling in credentials...")
 	err = chromedp.Run(loginCtx,
 		chromedp.SendKeys(`input[type="email"]`, email, chromedp.ByQuery),
 		chromedp.SendKeys(`input[type="password"]`, password, chromedp.ByQuery),
@@ -52,7 +52,7 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 		return nil, cleanFunc, err
 	}
 
-	app.logger.Info("   Submitting login form...")
+	app.logger.Info("Submitting login form...")
 	err = chromedp.Run(loginCtx,
 		chromedp.Click(`button[type="submit"]`, chromedp.ByQuery),
 		chromedp.Sleep(2*time.Second), // Wait for initial redirect to start
@@ -61,7 +61,7 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 		return nil, cleanFunc, err
 	}
 
-	app.logger.Info("   Waiting for redirect after login...")
+	app.logger.Info("Waiting for redirect after login...")
 
 	loginSuccess := false
 	timeout := time.After(20 * time.Second)
@@ -74,13 +74,13 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 		select {
 		case <-timeout:
 			app.logger.Error("Login failed: timeout waiting for redirect")
-			app.logger.Error("   Got:", "url", currentURL)
+			app.logger.Error("Got:", "url", currentURL)
 
 			// Try to get any error messages on the page
 			var errorText string
 			err := chromedp.Run(loginCtx, chromedp.Text(`body`, &errorText, chromedp.ByQuery))
 			if err != nil {
-				app.logger.Error("   Failed to get page content", "error", err)
+				app.logger.Error("Failed to get page content", "error", err)
 				return nil, cleanFunc, errors.New("login failed: did not redirect to expected URL after 20 seconds")
 			}
 			if len(errorText) > 0 && len(errorText) < 500 {
@@ -96,7 +96,7 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 
 			// Login is successful if URL is no longer the login page
 			if currentURL != "https://study.migaku.com/login" {
-				app.logger.Info("   Detected redirect to:", "url", currentURL)
+				app.logger.Info("Detected redirect to:", "url", currentURL)
 				loginSuccess = true
 			}
 		}

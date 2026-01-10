@@ -19,8 +19,9 @@ type Application struct {
 	isAuthenticated atomic.Bool
 	browserCtx      context.Context
 
-	logger *slog.Logger
-	cache  *DataCache
+	logger  *slog.Logger
+	cache   *Cache
+	service *MigakuService
 
 	headless      bool
 	port          int
@@ -87,7 +88,7 @@ func realMain(logger *slog.Logger) error {
 		}
 	}
 
-	cache := NewDataCache(cacheTTLDuration)
+	cache := NewCache(cacheTTLDuration)
 
 	secretKey := os.Getenv("API_SECRET")
 	if secretKey != "" {
@@ -113,6 +114,10 @@ func realMain(logger *slog.Logger) error {
 		return fmt.Errorf("failed to initialize browser: %w", err)
 	}
 	app.browserCtx = browserCtx
+
+	repo := NewRepository(app)
+	app.service = NewMigakuService(repo, cache)
+
 	logger.Info("Login complete, browser ready for queries")
 
 	//--- Start HTTP server ---

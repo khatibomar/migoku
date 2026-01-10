@@ -9,7 +9,7 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func (app *Application) runQuery(query string, params ...any) ([]map[string]any, error) {
+func runQuery[T any](app *Application, query string, params ...any) ([]T, error) {
 	isAuth := app.isAuthenticated.Load()
 
 	if !isAuth {
@@ -145,16 +145,27 @@ func (app *Application) runQuery(query string, params ...any) ([]map[string]any,
 })()
 `, "`"+query+"`", paramsJSON)
 
-	var result []map[string]any
+	var rawResult []map[string]any
 
 	awaitPromise := func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
 		return p.WithAwaitPromise(true)
 	}
 
 	app.logger.Info("Evaluating JavaScript in browser...")
-	if err := chromedp.Run(app.browserCtx, chromedp.Evaluate(script, &result, awaitPromise)); err != nil {
+	if err := chromedp.Run(app.browserCtx, chromedp.Evaluate(script, &rawResult, awaitPromise)); err != nil {
 		app.logger.Error("Query execution failed", "error", err)
 		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	// Convert raw result to generic type T
+	resultBytes, err := json.Marshal(rawResult)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	}
+
+	var result []T
+	if err := json.Unmarshal(resultBytes, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal result: %w", err)
 	}
 
 	app.logger.Info("Query completed", "rows", len(result))

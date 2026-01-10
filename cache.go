@@ -15,21 +15,21 @@ type CacheEntry struct {
 	ExpiresAt time.Time
 }
 
-// DataCache manages in-memory caching
-type DataCache struct {
+// Cache manages in-memory caching
+type Cache struct {
 	mu    sync.RWMutex
 	cache map[string]*CacheEntry
 	ttl   time.Duration
 }
 
-func NewDataCache(ttl time.Duration) *DataCache {
-	return &DataCache{
+func NewCache(ttl time.Duration) *Cache {
+	return &Cache{
 		cache: make(map[string]*CacheEntry),
 		ttl:   ttl,
 	}
 }
 
-func (c *DataCache) Get(key string) (any, bool) {
+func (c *Cache) Get(key string) (any, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -46,7 +46,7 @@ func (c *DataCache) Get(key string) (any, bool) {
 	return entry.Data, true
 }
 
-func (c *DataCache) Set(key string, value any) {
+func (c *Cache) Set(key string, value any) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -56,14 +56,14 @@ func (c *DataCache) Set(key string, value any) {
 	}
 }
 
-func (c *DataCache) Clear() {
+func (c *Cache) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.cache = make(map[string]*CacheEntry)
 }
 
-func (c *DataCache) RefreshTTL(newTTL time.Duration) {
+func (c *Cache) RefreshTTL(newTTL time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
