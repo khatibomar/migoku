@@ -133,9 +133,7 @@ func realMain(logger *slog.Logger) error {
 	mux.HandleFunc("GET /api/status", chainMiddlewares(app.handleStatus, app.corsMiddleware))
 
 	v1 := http.NewServeMux()
-	v1.HandleFunc("GET /words/all", chainMiddlewares(app.handleWordsAll, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("GET /words/known", chainMiddlewares(app.handleWordsKnown, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("GET /words/learning", chainMiddlewares(app.handleWordsLearning, app.corsMiddleware, app.authMiddleware))
+	v1.HandleFunc("GET /words", chainMiddlewares(app.handleWords, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("GET /decks", chainMiddlewares(app.handleDecks, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("GET /status/counts", chainMiddlewares(app.handleStatusCounts, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("GET /tables", chainMiddlewares(app.handleTables, app.corsMiddleware, app.authMiddleware))
@@ -143,7 +141,7 @@ func realMain(logger *slog.Logger) error {
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
 
 	logger.Info("Server starting", "url", "http://localhost:"+port)
-	logger.Info("Cache TTL", "duration", defaultCacheTTL)
+	logger.Info("Cache TTL", "ttl", cache.ttl.String())
 
 	server := &http.Server{
 		Addr:              ":" + port,

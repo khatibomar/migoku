@@ -64,38 +64,22 @@ func (app *Application) respondJSON(w http.ResponseWriter, data any) {
 	}
 }
 
-func (app *Application) handleWordsAll(w http.ResponseWriter, r *http.Request) {
+func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
 	lang := r.URL.Query().Get("lang")
+	status := r.URL.Query().Get("status")
 
-	words, err := app.service.GetAllWords(lang)
+	words, err := app.service.GetWords(lang, status)
 	if err != nil {
-		app.logger.Error("Failed to get all words", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	app.respondJSON(w, words)
-}
-
-func (app *Application) handleWordsKnown(w http.ResponseWriter, r *http.Request) {
-	lang := r.URL.Query().Get("lang")
-
-	words, err := app.service.GetKnownWords(lang)
-	if err != nil {
-		app.logger.Error("Failed to get known words", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	app.respondJSON(w, words)
-}
-
-func (app *Application) handleWordsLearning(w http.ResponseWriter, r *http.Request) {
-	lang := r.URL.Query().Get("lang")
-
-	words, err := app.service.GetLearningWords(lang)
-	if err != nil {
-		app.logger.Error("Failed to get learning words", "error", err)
+		if err.Error() == "invalid status: must be one of: known, learning, unknown, ignored" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			_, writeErr := w.Write([]byte(`{"error": "invalid status", "message": "Status must be one of: known, learning, unknown, ignored"}`))
+			if writeErr != nil {
+				app.logger.Error("Failed to write error response", "error", writeErr)
+			}
+			return
+		}
+		app.logger.Error("Failed to get words", "error", err, "status", status)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -191,24 +175,18 @@ func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
     <h2>Available Endpoints:</h2>
     
     <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/words/all</code><br>
-        <div class="desc">Get all words with their status (limit: 10,000)</div>
-        Query: <code>?lang=ja</code> (optional, filter by language)<br>
+        <span class="method">GET</span> <code>/api/v1/words</code><br>
+        <div class="desc">Get words with optional filters</div>
+        Query Parameters:<br>
+        • <code>status</code> (optional): Filter by status - values: <code>known</code>, <code>learning</code>, <code>unknown</code>, <code>ignored</code>. Omit to get all words (limit: 10,000)<br>
+        • <code>lang</code> (optional): Filter by language code (e.g., <code>ja</code>, <code>en</code>)<br>
+        <strong>Examples:</strong><br>
+        • <code>/api/v1/words</code> - all words<br>
+        • <code>/api/v1/words?status=known</code> - known words only<br>
+        • <code>/api/v1/words?status=unknown</code> - unknown words<br>
+        • <code>/api/v1/words?lang=ja</code> - all Japanese words<br>
+        • <code>/api/v1/words?status=learning&lang=ja</code> - Japanese learning words<br>
         <div class="response">[{"dictForm":"本","secondary":"ほん","knownStatus":"KNOWN"}]</div>
-    </div>
-    
-    <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/words/known</code><br>
-        <div class="desc">Get all known words</div>
-        Query: <code>?lang=ja</code> (optional, filter by language)<br>
-        <div class="response">[{"dictForm":"本","secondary":"ほん"}]</div>
-    </div>
-    
-    <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/words/learning</code><br>
-        <div class="desc">Get all learning words</div>
-        Query: <code>?lang=ja</code> (optional, filter by language)<br>
-        <div class="response">[{"dictForm":"食べる","secondary":"たべる"}]</div>
     </div>
     
     <div class="endpoint">

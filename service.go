@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // Word represents a word in the domain
 type Word struct {
@@ -11,11 +14,7 @@ type Word struct {
 
 // WordFromRow creates a Word from a repository wordRow
 func WordFromRow(row wordRow) Word {
-	return Word{
-		DictForm:    row.DictForm,
-		Secondary:   row.Secondary,
-		KnownStatus: row.KnownStatus,
-	}
+	return Word(row)
 }
 
 // WordsFromRows creates a slice of Words from repository wordRows
@@ -35,10 +34,7 @@ type Deck struct {
 
 // DeckFromRow creates a Deck from a repository deckRow
 func DeckFromRow(row deckRow) Deck {
-	return Deck{
-		ID:   row.ID,
-		Name: row.Name,
-	}
+	return Deck(row)
 }
 
 // DecksFromRows creates a slice of Decks from repository deckRows
@@ -83,9 +79,7 @@ type Table struct {
 
 // TableFromRow creates a Table from a repository tableRow
 func TableFromRow(row tableRow) Table {
-	return Table{
-		Name: row.Name,
-	}
+	return Table(row)
 }
 
 // TablesFromRows creates a slice of Tables from repository tableRows
@@ -111,9 +105,18 @@ func NewMigakuService(repo *Repository, cache *Cache) *MigakuService {
 	}
 }
 
-// GetAllWords retrieves all words with caching
-func (s *MigakuService) GetAllWords(lang string) ([]Word, error) {
-	cacheKey := "words:all:"
+// GetWords retrieves words with optional status and language filters
+func (s *MigakuService) GetWords(lang, status string) ([]Word, error) {
+	if status != "" && status != "known" && status != "learning" && status != "unknown" && status != "ignored" {
+		return nil, errors.New("invalid status: must be one of: known, learning, unknown, ignored")
+	}
+
+	cacheKey := "words:"
+	if status == "" {
+		cacheKey += "all:"
+	} else {
+		cacheKey += status + ":"
+	}
 	if lang == "" {
 		cacheKey += "all"
 	} else {
@@ -126,59 +129,26 @@ func (s *MigakuService) GetAllWords(lang string) ([]Word, error) {
 		}
 	}
 
-	rows, err := s.repo.GetWords(lang, "", 10000)
-	if err != nil {
-		return nil, err
-	}
-
-	words := WordsFromRows(rows)
-	s.cache.Set(cacheKey, words)
-
-	return words, nil
-}
-
-// GetKnownWords retrieves known words with caching
-func (s *MigakuService) GetKnownWords(lang string) ([]Word, error) {
-	cacheKey := "words:known:"
-	if lang == "" {
-		cacheKey += "all"
-	} else {
-		cacheKey += lang
-	}
-
-	if cached, ok := s.cache.Get(cacheKey); ok {
-		if words, ok := cached.([]Word); ok {
-			return words, nil
+	var dbStatus string
+	if status != "" {
+		switch status {
+		case "known":
+			dbStatus = "KNOWN"
+		case "learning":
+			dbStatus = "LEARNING"
+		case "unknown":
+			dbStatus = "UNKNOWN"
+		case "ignored":
+			dbStatus = "IGNORED"
 		}
 	}
 
-	rows, err := s.repo.GetWords(lang, "KNOWN", 0)
-	if err != nil {
-		return nil, err
+	limit := 0
+	if dbStatus == "" {
+		limit = 10000
 	}
 
-	words := WordsFromRows(rows)
-	s.cache.Set(cacheKey, words)
-
-	return words, nil
-}
-
-// GetLearningWords retrieves learning words with caching
-func (s *MigakuService) GetLearningWords(lang string) ([]Word, error) {
-	cacheKey := "words:learning:"
-	if lang == "" {
-		cacheKey += "all"
-	} else {
-		cacheKey += lang
-	}
-
-	if cached, ok := s.cache.Get(cacheKey); ok {
-		if words, ok := cached.([]Word); ok {
-			return words, nil
-		}
-	}
-
-	rows, err := s.repo.GetWords(lang, "LEARNING", 0)
+	rows, err := s.repo.GetWords(lang, dbStatus, limit)
 	if err != nil {
 		return nil, err
 	}
