@@ -83,9 +83,9 @@ func (app *Application) handleWordsAll(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if lang != "" {
-		data, err = app.runQuery("SELECT dictForm, secondary, knownStatus FROM wordHistory WHERE language = ? LIMIT 10000;", lang)
+		data, err = app.runQuery("SELECT dictForm, secondary, knownStatus FROM WordList WHERE language = ? AND del = 0 LIMIT 10000;", lang)
 	} else {
-		data, err = app.runQuery("SELECT dictForm, secondary, knownStatus FROM wordHistory LIMIT 10000;")
+		data, err = app.runQuery("SELECT dictForm, secondary, knownStatus FROM WordList WHERE del = 0 LIMIT 10000;")
 	}
 
 	if err != nil {
@@ -116,9 +116,9 @@ func (app *Application) handleWordsKnown(w http.ResponseWriter, r *http.Request)
 	var err error
 
 	if lang != "" {
-		data, err = app.runQuery("SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'KNOWN' AND language = ?;", lang)
+		data, err = app.runQuery("SELECT dictForm, secondary FROM WordList WHERE knownStatus = 'KNOWN' AND language = ? AND del = 0;", lang)
 	} else {
-		data, err = app.runQuery("SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'KNOWN';")
+		data, err = app.runQuery("SELECT dictForm, secondary FROM WordList WHERE knownStatus = 'KNOWN' AND del = 0;")
 	}
 
 	if err != nil {
@@ -149,9 +149,9 @@ func (app *Application) handleWordsLearning(w http.ResponseWriter, r *http.Reque
 	var err error
 
 	if lang != "" {
-		data, err = app.runQuery("SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'LEARNING' AND language = ?;", lang)
+		data, err = app.runQuery("SELECT dictForm, secondary FROM WordList WHERE knownStatus = 'LEARNING' AND language = ? AND del = 0;", lang)
 	} else {
-		data, err = app.runQuery("SELECT dictForm, secondary FROM wordHistory WHERE knownStatus = 'LEARNING';")
+		data, err = app.runQuery("SELECT dictForm, secondary FROM WordList WHERE knownStatus = 'LEARNING' AND del = 0;")
 	}
 
 	if err != nil {
@@ -215,15 +215,39 @@ func (app *Application) handleStatusCounts(w http.ResponseWriter, r *http.Reques
 
 	if deckID == "" {
 		if lang != "" {
-			data, err = app.runQuery("SELECT knownStatus, COUNT(*) as count FROM wordHistory WHERE language = ? GROUP BY knownStatus;", lang)
+			data, err = app.runQuery(`SELECT
+				SUM(CASE WHEN knownStatus = 'KNOWN' THEN 1 ELSE 0 END) as known_count,
+				SUM(CASE WHEN knownStatus = 'LEARNING' THEN 1 ELSE 0 END) as learning_count,
+				SUM(CASE WHEN knownStatus = 'UNKNOWN' THEN 1 ELSE 0 END) as unknown_count,
+				SUM(CASE WHEN knownStatus = 'IGNORED' THEN 1 ELSE 0 END) as ignored_count
+			FROM WordList
+			WHERE language = ? AND del = 0;`, lang)
 		} else {
-			data, err = app.runQuery("SELECT knownStatus, COUNT(*) as count FROM wordHistory GROUP BY knownStatus;")
+			data, err = app.runQuery(`SELECT
+				SUM(CASE WHEN knownStatus = 'KNOWN' THEN 1 ELSE 0 END) as known_count,
+				SUM(CASE WHEN knownStatus = 'LEARNING' THEN 1 ELSE 0 END) as learning_count,
+				SUM(CASE WHEN knownStatus = 'UNKNOWN' THEN 1 ELSE 0 END) as unknown_count,
+				SUM(CASE WHEN knownStatus = 'IGNORED' THEN 1 ELSE 0 END) as ignored_count
+			FROM WordList
+			WHERE del = 0;`)
 		}
 	} else {
 		if lang != "" {
-			data, err = app.runQuery("SELECT knownStatus, COUNT(*) as count FROM wordHistory WHERE deckId = ? AND language = ? GROUP BY knownStatus;", deckID, lang)
+			data, err = app.runQuery(`SELECT
+				SUM(CASE WHEN knownStatus = 'KNOWN' THEN 1 ELSE 0 END) as known_count,
+				SUM(CASE WHEN knownStatus = 'LEARNING' THEN 1 ELSE 0 END) as learning_count,
+				SUM(CASE WHEN knownStatus = 'UNKNOWN' THEN 1 ELSE 0 END) as unknown_count,
+				SUM(CASE WHEN knownStatus = 'IGNORED' THEN 1 ELSE 0 END) as ignored_count
+			FROM WordList
+			WHERE deckId = ? AND language = ? AND del = 0;`, deckID, lang)
 		} else {
-			data, err = app.runQuery("SELECT knownStatus, COUNT(*) as count FROM wordHistory WHERE deckId = ? GROUP BY knownStatus;", deckID)
+			data, err = app.runQuery(`SELECT
+				SUM(CASE WHEN knownStatus = 'KNOWN' THEN 1 ELSE 0 END) as known_count,
+				SUM(CASE WHEN knownStatus = 'LEARNING' THEN 1 ELSE 0 END) as learning_count,
+				SUM(CASE WHEN knownStatus = 'UNKNOWN' THEN 1 ELSE 0 END) as unknown_count,
+				SUM(CASE WHEN knownStatus = 'IGNORED' THEN 1 ELSE 0 END) as ignored_count
+			FROM WordList
+			WHERE deckId = ? AND del = 0;`, deckID)
 		}
 	}
 

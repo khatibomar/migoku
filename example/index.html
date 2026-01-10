@@ -226,35 +226,47 @@
         }
 
         function displayStats(data) {
-            const statusMap = {
-                'KNOWN': { icon: '✓', label: 'Known', class: 'known' },
-                'LEARNING': { icon: '→', label: 'Learning', class: 'learning' },
-                'NEW': { icon: '◯', label: 'New', class: 'new' },
-                'SEEN': { icon: '●', label: 'Seen', class: 'new' }
-            };
+            // Data is now in format: [{"known_count":606,"learning_count":79,"unknown_count":2551,"ignored_count":4}]
+            const stats = data[0] || {};
+            
+            const known = stats.known_count || 0;
+            const learning = stats.learning_count || 0;
+            const unknown = stats.unknown_count || 0;
+            const ignored = stats.ignored_count || 0;
+            
+            const total = known + learning + unknown + ignored;
 
-            let total = 0;
-            let statsHTML = '<div class="stats-grid">';
-
-            data.forEach(item => {
-                const count = item.count || 0;
-                total += count;
-                const status = item.knownStatus || 'UNKNOWN';
-                const config = statusMap[status] || { icon: '❓', label: status, class: '' };
-
-                statsHTML += `
-                    <div class="stat-item ${config.class}">
+            const statsHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item known">
                         <div class="stat-label">
-                            <span class="stat-icon">${config.icon}</span>
-                            ${config.label}
+                            <span class="stat-icon">✓</span>
+                            Known
                         </div>
-                        <div class="stat-value">${count.toLocaleString()}</div>
+                        <div class="stat-value">${known.toLocaleString()}</div>
                     </div>
-                `;
-            });
-
-            statsHTML += '</div>';
-            statsHTML += `
+                    <div class="stat-item learning">
+                        <div class="stat-label">
+                            <span class="stat-icon">→</span>
+                            Learning
+                        </div>
+                        <div class="stat-value">${learning.toLocaleString()}</div>
+                    </div>
+                    <div class="stat-item new">
+                        <div class="stat-label">
+                            <span class="stat-icon">◯</span>
+                            Unknown
+                        </div>
+                        <div class="stat-value">${unknown.toLocaleString()}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">
+                            <span class="stat-icon">✕</span>
+                            Ignored
+                        </div>
+                        <div class="stat-value">${ignored.toLocaleString()}</div>
+                    </div>
+                </div>
                 <div class="total-section">
                     <div class="total-label">Total Words</div>
                     <div class="total-value">${total.toLocaleString()}</div>
