@@ -45,7 +45,10 @@ func (app *Application) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if apiKey != app.secretKey {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error": "unauthorized", "message": "Invalid or missing API key"}`))
+			_, err := w.Write([]byte(`{"error": "unauthorized", "message": "Invalid or missing API key"}`))
+			if err != nil {
+				app.logger.Error("Failed to write unauthorized response", "error", err)
+			}
 			return
 		}
 

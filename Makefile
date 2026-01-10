@@ -1,4 +1,4 @@
-.PHONY: run build clean docker-run
+.PHONY: run build clean docker-run lint
 
 # Run the API server
 run:
@@ -20,3 +20,7 @@ docker-run:
 clean:
 	@echo "Cleaning..."
 	rm -f migaku-server
+
+# Run linting
+lint:
+	golangci-lint run
