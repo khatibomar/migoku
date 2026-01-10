@@ -21,7 +21,7 @@ vendor/
 *~
 
 # Git
-.git/
+# .git/  # Temporarily allow .git for version detection
 .gitignore
 
 # Documentation

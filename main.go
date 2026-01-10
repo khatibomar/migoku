@@ -116,15 +116,16 @@ func realMain(logger *slog.Logger) error {
 	logger.Info("Login complete, browser ready for queries")
 
 	//--- Start HTTP server ---
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", app.corsMiddleware(app.handleRoot))
-
 	chainMiddlewares := func(handler http.HandlerFunc, middlewares ...func(http.HandlerFunc) http.HandlerFunc) http.HandlerFunc {
 		for i := len(middlewares) - 1; i >= 0; i-- {
 			handler = middlewares[i](handler)
 		}
 		return handler
 	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", chainMiddlewares(app.handleRoot, app.corsMiddleware))
+	mux.HandleFunc("/api/status", chainMiddlewares(app.handleStatus, app.corsMiddleware))
 
 	v1 := http.NewServeMux()
 	v1.HandleFunc("/words/all", chainMiddlewares(app.handleWordsAll, app.corsMiddleware, app.authMiddleware))
@@ -133,7 +134,6 @@ func realMain(logger *slog.Logger) error {
 	v1.HandleFunc("/decks", chainMiddlewares(app.handleDecks, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("/status/counts", chainMiddlewares(app.handleStatusCounts, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("/tables", chainMiddlewares(app.handleTables, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("/status", chainMiddlewares(app.handleStatus, app.corsMiddleware, app.authMiddleware))
 
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
 

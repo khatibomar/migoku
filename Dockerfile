@@ -26,20 +26,27 @@ WORKDIR /app
 COPY --from=builder /app/migakustat .
 COPY --from=builder /app/example ./example
 
-ARG VERSION
-LABEL version=$VERSION
-
 ENV CHROME_BIN=/usr/bin/chromium-browser \
     CHROME_PATH=/usr/lib/chromium/ \
     CHROMIUM_FLAGS="--disable-software-rasterizer --disable-dev-shm-usage"
 
-ARG MIGAKU_EMAIL
-ARG MIGAKU_PASSWORD
-ARG MIGAKU_HEADLESS=true
+ARG EMAIL
+ARG PASSWORD
+ARG HEADLESS=true
+ARG LOG_LEVEL=info
+ARG PORT=8080
+ARG API_SECRET
+ARG CORS_ORIGINS
+ARG CACHE_TTL
 
-ENV MIGAKU_EMAIL=${MIGAKU_EMAIL} \
-    MIGAKU_PASSWORD=${MIGAKU_PASSWORD} \
-    MIGAKU_HEADLESS=${MIGAKU_HEADLESS}
+ENV EMAIL=${EMAIL} \
+    PASSWORD=${PASSWORD} \
+    HEADLESS=${HEADLESS} \
+    LOG_LEVEL=${LOG_LEVEL} \
+    PORT=${PORT} \
+    API_SECRET=${API_SECRET} \
+    CORS_ORIGINS=${CORS_ORIGINS} \
+    CACHE_TTL=${CACHE_TTL}
 
 RUN chown -R app:app /app
 
@@ -48,6 +55,6 @@ USER app
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/status || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/api/status || exit 1
 
 CMD ["./migakustat"]

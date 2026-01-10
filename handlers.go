@@ -251,7 +251,7 @@ func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
     </div>
     
     <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/status</code><br>
+        <span class="method">GET</span> <code>/api/status</code><br>
         Get server status and configuration
     </div>
 </body>
