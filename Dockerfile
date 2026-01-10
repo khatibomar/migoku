@@ -26,6 +26,9 @@ WORKDIR /app
 COPY --from=builder /app/migakustat .
 COPY --from=builder /app/example ./example
 
+ARG VERSION
+LABEL version=$VERSION
+
 ENV CHROME_BIN=/usr/bin/chromium-browser \
     CHROME_PATH=/usr/lib/chromium/ \
     CHROMIUM_FLAGS="--disable-software-rasterizer --disable-dev-shm-usage"

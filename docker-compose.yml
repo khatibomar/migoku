@@ -6,6 +6,7 @@ services:
         - MIGAKU_EMAIL=${MIGAKU_EMAIL}
         - MIGAKU_PASSWORD=${MIGAKU_PASSWORD}
         - MIGAKU_HEADLESS=${MIGAKU_HEADLESS:-true}
+        - VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo dev)
     container_name: migakustat
     ports:
       - "8080:8080"

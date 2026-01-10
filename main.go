@@ -29,22 +29,26 @@ type Application struct {
 	secretKey     string
 }
 
-func main() {
-	if err := realMain(); err != nil {
-		slog.Error("Application error", "error", err)
-		os.Exit(1)
-	}
-}
+var _, longVersion, _ = FromBuildInfo()
 
-func realMain() error {
+func main() {
 	logLevel := os.Getenv("LOG_LEVEL")
 	var logLvl slog.Level
 	if err := logLvl.UnmarshalText([]byte(logLevel)); err != nil {
 		logLvl = slog.LevelInfo
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLvl}))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLvl}))
 	slog.SetDefault(logger)
 
+	logger.Info("Application starting", "version", longVersion, "log_level", logLvl.String())
+
+	if err := realMain(logger); err != nil {
+		logger.Error("Application error", "error", err)
+		os.Exit(1)
+	}
+}
+
+func realMain(logger *slog.Logger) error {
 	headless := os.Getenv("HEADLESS") != "false"
 	port := os.Getenv("PORT")
 	if port == "" {

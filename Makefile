@@ -14,7 +14,7 @@ build:
 # Run with Docker Compose
 docker-run:
 	@echo "Starting Migaku Stats API Server with Docker..."
-	docker-compose up --build
+	docker compose up --build
 
 # Clean build artifacts
 clean:
