@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japanese Learning Stats 🇯🇵</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .character-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 5px solid white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin: 0 auto 15px;
+            display: block;
+            object-fit: cover;
+        }
+
+        .card-title {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .flag {
+            font-size: 32px;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-item.known {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .stat-item.learning {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+
+        .stat-item.new {
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+        }
+
+        .stat-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px;
+            text-align: center;
+        }
+
+        .total-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .total-label {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .total-value {
+            font-size: 48px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="stats-card">
+            <div class="card-header">
+                <img src="images/Kobayashi.webp" alt="Kobayashi" class="character-image">
+                <h1 class="card-title">
+                    <span class="flag">🇯🇵</span>
+                    Japanese Learning Progress
+                    <span class="flag">🇯🇵</span>
+                </h1>
+            </div>
+            <div class="card-body" id="cardBody">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading your stats...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchStats() {
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/status/counts');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                displayStats(data);
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                document.getElementById('cardBody').innerHTML = `
+                    <div class="error">
+                        Failed to load stats. Make sure the server is running on localhost:8080
+                    </div>
+                `;
+            }
+        }
+
+        function displayStats(data) {
+            const statusMap = {
+                'KNOWN': { icon: '✓', label: 'Known', class: 'known' },
+                'LEARNING': { icon: '→', label: 'Learning', class: 'learning' },
+                'NEW': { icon: '◯', label: 'New', class: 'new' },
+                'SEEN': { icon: '●', label: 'Seen', class: 'new' }
+            };
+
+            let total = 0;
+            let statsHTML = '<div class="stats-grid">';
+
+            data.forEach(item => {
+                const count = item.count || 0;
+                total += count;
+                const status = item.knownStatus || 'UNKNOWN';
+                const config = statusMap[status] || { icon: '❓', label: status, class: '' };
+
+                statsHTML += `
+                    <div class="stat-item ${config.class}">
+                        <div class="stat-label">
+                            <span class="stat-icon">${config.icon}</span>
+                            ${config.label}
+                        </div>
+                        <div class="stat-value">${count.toLocaleString()}</div>
+                    </div>
+                `;
+            });
+
+            statsHTML += '</div>';
+            statsHTML += `
+                <div class="total-section">
+                    <div class="total-label">Total Words</div>
+                    <div class="total-value">${total.toLocaleString()}</div>
+                </div>
+            `;
+
+            document.getElementById('cardBody').innerHTML = statsHTML;
+        }
+
+        // Fetch stats on load
+        fetchStats();
+
+        // Optional: Refresh stats every 30 seconds
+        setInterval(fetchStats, 30000);
+    </script>
+</body>
+</html>
