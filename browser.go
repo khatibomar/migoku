@@ -55,56 +55,75 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 	app.logger.Info("Submitting login form...")
 	err = chromedp.Run(loginCtx,
 		chromedp.Click(`button[type="submit"]`, chromedp.ByQuery),
-		chromedp.Sleep(2*time.Second), // Wait for initial redirect to start
 	)
 	if err != nil {
 		return nil, cleanFunc, err
 	}
 
-	app.logger.Info("Waiting for redirect after login...")
+	app.logger.Info("Waiting for login to complete...")
 
+	// Custom wait for URL change - chromedp's navigation detection
 	loginSuccess := false
-	timeout := time.After(20 * time.Second)
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
+	startTime := time.Now()
+	timeout := 30 * time.Second
 
 	var currentURL string
-
-	for !loginSuccess {
-		select {
-		case <-timeout:
-			app.logger.Error("Login failed: timeout waiting for redirect")
-			app.logger.Error("Got:", "url", currentURL)
-
-			// Try to get any error messages on the page
-			var errorText string
-			err := chromedp.Run(loginCtx, chromedp.Text(`body`, &errorText, chromedp.ByQuery))
-			if err != nil {
-				app.logger.Error("Failed to get page content", "error", err)
-				return nil, cleanFunc, errors.New("login failed: did not redirect to expected URL after 20 seconds")
-			}
-			if len(errorText) > 0 && len(errorText) < 500 {
-				app.logger.Error("Page content:", "text", errorText)
-			}
-
-			return nil, cleanFunc, errors.New("login failed: did not redirect to expected URL after 20 seconds")
-		case <-ticker.C:
-			err = chromedp.Run(loginCtx, chromedp.Location(&currentURL))
-			if err != nil {
-				return nil, cleanFunc, err
-			}
-
-			// Login is successful if URL is no longer the login page
-			if currentURL != "https://study.migaku.com/login" {
-				app.logger.Info("Detected redirect to:", "url", currentURL)
-				loginSuccess = true
-			}
+	for !loginSuccess && time.Since(startTime) < timeout {
+		err = chromedp.Run(loginCtx, chromedp.Location(&currentURL))
+		if err != nil {
+			app.logger.Error("Failed to get URL", "error", err)
+			time.Sleep(500 * time.Millisecond)
+			continue
 		}
+
+		app.logger.Debug("Checking URL", "url", currentURL)
+
+		// Success: URL changed from login page
+		if currentURL != "https://study.migaku.com/login" && currentURL != "" {
+			app.logger.Info("Navigation detected", "url", currentURL)
+
+			// Wait for new page to start loading
+			time.Sleep(500 * time.Millisecond)
+
+			// Verify page is responsive
+			var readyState string
+			err = chromedp.Run(loginCtx,
+				chromedp.Evaluate(`document.readyState`, &readyState),
+			)
+
+			if err == nil && (readyState == "interactive" || readyState == "complete") {
+				loginSuccess = true
+				break
+			}
+
+			app.logger.Debug("Page still loading", "readyState", readyState)
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	if !loginSuccess {
+		// Navigation didn't happen - login likely failed
+		var pageText string
+		if err := chromedp.Run(loginCtx, chromedp.Text(`body`, &pageText, chromedp.ByQuery)); err != nil {
+			app.logger.Error("Failed to get page text", "error", err)
+		}
+		if err := chromedp.Run(loginCtx, chromedp.Location(&currentURL)); err != nil {
+			app.logger.Error("Failed to get current URL", "error", err)
+		}
+
+		app.logger.Error("Login failed - no navigation occurred")
+		app.logger.Error("Current URL", "url", currentURL)
+		if len(pageText) > 0 && len(pageText) < 500 {
+			app.logger.Error("Page content", "text", pageText)
+		}
+
+		return nil, cleanFunc, errors.New("login failed: credentials may be incorrect or page did not redirect")
 	}
 
 	app.logger.Info("Login successful", "url", currentURL)
 
-	// Ensure page is fully loaded
+	// Ensure new page is fully loaded
 	err = chromedp.Run(loginCtx, chromedp.WaitReady("body"))
 	if err != nil {
 		return nil, cleanFunc, err

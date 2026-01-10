@@ -7,6 +7,8 @@ A Go HTTP server that provides REST API access to Migaku's local IndexedDB data 
 Main important information this API can return are bunch of statistics, and information about your decks.
 Like words you are learning and their metadata, etc...
 
+> ⚠️ still in beta phase, I am doing some breaking changes from time to time
+
 ## Why?
 
 At the moment of writing this project, migaku doesn't support a way to access our own statistics through an API.
