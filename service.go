@@ -240,3 +240,84 @@ func (s *MigakuService) buildStatusCountsCacheKey(lang, deckID string) string {
 
 	return cacheKey
 }
+
+// DifficultWord represents words with high fail rates
+type DifficultWord struct {
+	DictForm      string  `json:"dictForm"`
+	Secondary     string  `json:"secondary"`
+	PartOfSpeech  string  `json:"partOfSpeech"`
+	KnownStatus   string  `json:"knownStatus"`
+	TotalReviews  int     `json:"total_reviews"`
+	FailedReviews int     `json:"failed_reviews"`
+	FailRate      float64 `json:"fail_rate"`
+}
+
+// GetDifficultWords retrieves words with highest fail rates
+func (s *MigakuService) GetDifficultWords(lang string, limit int, deckID string) ([]DifficultWord, error) {
+	if limit == 0 {
+		limit = 50
+	}
+	cacheKey := fmt.Sprintf("difficult:words:%s:%d:%s", lang, limit, deckID)
+
+	if cached, ok := s.cache.Get(cacheKey); ok {
+		if words, ok := cached.([]DifficultWord); ok {
+			return words, nil
+		}
+	}
+
+	rows, err := s.repo.GetDifficultWords(lang, limit, deckID)
+	if err != nil {
+		return nil, err
+	}
+
+	words := make([]DifficultWord, len(rows))
+	for i, row := range rows {
+		words[i] = DifficultWord(row)
+	}
+
+	s.cache.Set(cacheKey, words)
+	return words, nil
+}
+
+// FieldMetadata represents metadata about a database column
+type FieldMetadata struct {
+	Type       string `json:"type"`
+	NotNull    bool   `json:"notNull"`
+	PrimaryKey bool   `json:"primaryKey"`
+}
+
+// DatabaseSchema represents the database schema structure
+type DatabaseSchema map[string]map[string]FieldMetadata
+
+// GetDatabaseSchema retrieves the database schema and transforms it into a nested structure
+func (s *MigakuService) GetDatabaseSchema() (DatabaseSchema, error) {
+	cacheKey := "database:schema"
+
+	if cached, ok := s.cache.Get(cacheKey); ok {
+		if schema, ok := cached.(DatabaseSchema); ok {
+			return schema, nil
+		}
+	}
+
+	rows, err := s.repo.GetDatabaseSchema()
+	if err != nil {
+		return nil, err
+	}
+
+	tableToFields := make(DatabaseSchema)
+
+	for _, row := range rows {
+		if _, exists := tableToFields[row.TableName]; !exists {
+			tableToFields[row.TableName] = make(map[string]FieldMetadata)
+		}
+
+		tableToFields[row.TableName][row.ColumnName] = FieldMetadata{
+			Type:       row.ColumnType,
+			NotNull:    row.IsNotNull != 0,
+			PrimaryKey: row.IsPrimaryKey != 0,
+		}
+	}
+
+	s.cache.Set(cacheKey, tableToFields)
+	return tableToFields, nil
+}

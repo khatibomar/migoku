@@ -1,10 +1,15 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"net/http"
 	"slices"
+	"strconv"
 )
+
+//go:embed api.html
+var apiHTML []byte
 
 func (app *Application) corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -124,6 +129,46 @@ func (app *Application) handleTables(w http.ResponseWriter, r *http.Request) {
 	app.respondJSON(w, tables)
 }
 
+func (app *Application) handleDatabaseSchema(w http.ResponseWriter, r *http.Request) {
+	schema, err := app.service.GetDatabaseSchema()
+	if err != nil {
+		app.logger.Error("Failed to get database schema", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	app.respondJSON(w, schema)
+}
+
+func (app *Application) handleDifficultWords(w http.ResponseWriter, r *http.Request) {
+	lang := r.URL.Query().Get("lang")
+	limit := 50
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	if lang == "" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
+			app.logger.Error("Failed to write error response", "error", err)
+		}
+		return
+	}
+
+	deckID := r.URL.Query().Get("deckId")
+
+	words, err := app.service.GetDifficultWords(lang, limit, deckID)
+	if err != nil {
+		app.logger.Error("Failed to get difficult words", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	app.respondJSON(w, words)
+}
+
 func (app *Application) handleStatus(w http.ResponseWriter, r *http.Request) {
 	isAuth := app.isAuthenticated.Load()
 
@@ -146,78 +191,18 @@ func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	html := `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Migoku API</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
-        h1 { color: #333; }
-        h2 { color: #555; margin-top: 30px; }
-        .endpoint { background: #f4f4f4; padding: 15px; margin: 10px 0; border-radius: 5px; }
-        .method { color: #007bff; font-weight: bold; }
-        code { background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.9em; }
-        .response { background: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; margin-top: 5px; overflow-x: auto; }
-        .desc { color: #666; margin: 5px 0; }
-        .auth-info { background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #ffc107; }
-    </style>
-</head>
-<body>
-    <h1>Migaku Stats API</h1>
-    <p>Access your Migaku database through REST API with in-memory caching and parameterized queries for security.</p>
-    
-    <div class="auth-info">
-        <strong>Authentication:</strong> If API_SECRET is configured, include it in requests:<br>
-        <code>X-API-Key: your-secret</code> or <code>Authorization: Bearer your-secret</code>
-    </div>
-    
-    <h2>Available Endpoints:</h2>
-    
-    <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/words</code><br>
-        <div class="desc">Get words with optional filters</div>
-        Query Parameters:<br>
-        • <code>status</code> (optional): Filter by status - values: <code>known</code>, <code>learning</code>, <code>unknown</code>, <code>ignored</code>. Omit to get all words (limit: 10,000)<br>
-        • <code>lang</code> (optional): Filter by language code (e.g., <code>ja</code>, <code>en</code>)<br>
-        <strong>Examples:</strong><br>
-        • <code>/api/v1/words</code> - all words<br>
-        • <code>/api/v1/words?status=known</code> - known words only<br>
-        • <code>/api/v1/words?status=unknown</code> - unknown words<br>
-        • <code>/api/v1/words?lang=ja</code> - all Japanese words<br>
-        • <code>/api/v1/words?status=learning&lang=ja</code> - Japanese learning words<br>
-        <div class="response">[{"dictForm":"本","secondary":"ほん","knownStatus":"KNOWN"}]</div>
-    </div>
-    
-    <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/decks</code><br>
-        <div class="desc">Get all active decks</div>
-        <div class="response">[{"id":1,"name":"Core 2k"}]</div>
-    </div>
-    
-    <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/status/counts</code><br>
-        <div class="desc">Get aggregated word status counts</div>
-        Query: <code>?deckId=123&lang=ja</code> (both optional)<br>
-        <div class="response">[{"known_count":606,"learning_count":79,"unknown_count":2551,"ignored_count":4}]</div>
-    </div>
-    
-    <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/tables</code><br>
-        <div class="desc">List all database tables</div>
-        <div class="response">[{"name":"WordList"},{"name":"deck"}]</div>
-    </div>
-    
-    <div class="endpoint">
-        <span class="method">GET</span> <code>/api/status</code><br>
-        <div class="desc">Get server status and configuration</div>
-        <div class="response">{"status":"running","authenticated":true,"cache_ttl":"5m0s","headless":true}</div>
-    </div>
-</body>
-</html>`
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err := w.Write([]byte(html))
+	_, err := w.Write(apiHTML)
 	if err != nil {
 		app.logger.Error("Failed to write root response", "error", err)
 	}
+}
+
+func (app *Application) handleClearCache(w http.ResponseWriter, r *http.Request) {
+	app.cache.Clear()
+	app.logger.Info("Cache cleared")
+	app.respondJSON(w, map[string]string{
+		"status":  "success",
+		"message": "Cache cleared successfully",
+	})
 }

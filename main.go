@@ -138,7 +138,17 @@ func realMain(logger *slog.Logger) error {
 	v1.HandleFunc("GET /status/counts", chainMiddlewares(app.handleStatusCounts, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("GET /tables", chainMiddlewares(app.handleTables, app.corsMiddleware, app.authMiddleware))
 
+	// Japanese study analysis endpoints
+	v1.HandleFunc("GET /words/difficult", chainMiddlewares(app.handleDifficultWords, app.corsMiddleware, app.authMiddleware))
+
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
+
+	// Utility mux for admin/utility endpoints
+	utility := http.NewServeMux()
+	utility.HandleFunc("GET /database/schema", chainMiddlewares(app.handleDatabaseSchema, app.corsMiddleware, app.authMiddleware))
+	utility.HandleFunc("POST /cache/clear", chainMiddlewares(app.handleClearCache, app.corsMiddleware, app.authMiddleware))
+
+	mux.Handle("/utility/", http.StripPrefix("/utility", utility))
 
 	logger.Info("Server starting", "url", "http://localhost:"+port)
 	logger.Info("Cache TTL", "ttl", cache.ttl.String())

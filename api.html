@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Migoku API</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
+        h1 { color: #333; }
+        h2 { color: #555; margin-top: 30px; }
+        .endpoint { background: #f4f4f4; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .method { color: #007bff; font-weight: bold; }
+        code { background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 0.9em; }
+        .response { background: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 5px; margin-top: 5px; overflow-x: auto; }
+        .desc { color: #666; margin: 5px 0; }
+        .auth-info { background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>Migoku API</h1>
+    <p>Access your Migaku database through REST API with in-memory caching and parameterized queries for security.</p>
+    <p><strong>Note:</strong> Migoku is an unofficial community-made utility that provides API access to your local Migaku data.</p>
+    
+    <div class="auth-info">
+        <strong>Authentication:</strong> If API_SECRET is configured, include it in requests:<br>
+        <code>X-API-Key: your-secret</code> or <code>Authorization: Bearer your-secret</code>
+    </div>
+    
+    <h2>Available Endpoints:</h2>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/status</code><br>
+        <div class="desc">Get server status and configuration</div>
+        <pre class="response">{"status":"running","authenticated":true,"cache_ttl":"5m0s","headless":true}</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/v1/words</code><br>
+        <div class="desc">Get words with optional filters</div>
+        Query Parameters:<br>
+        • <code>status</code> (optional): Filter by status - values: <code>known</code>, <code>learning</code>, <code>unknown</code>, <code>ignored</code>. Omit to get all words (limit: 10,000)<br>
+        • <code>lang</code> (optional): Filter by language code (e.g., <code>ja</code>, <code>en</code>)<br>
+        <strong>Examples:</strong><br>
+        • <code>/api/v1/words</code> - all words<br>
+        • <code>/api/v1/words?status=known</code> - known words only<br>
+        • <code>/api/v1/words?status=unknown</code> - unknown words<br>
+        • <code>/api/v1/words?lang=ja</code> - all Japanese words<br>
+        • <code>/api/v1/words?status=learning&lang=ja</code> - Japanese learning words<br>
+        <pre class="response">[{"dictForm":"本","secondary":"ほん","knownStatus":"KNOWN"}]</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/v1/decks</code><br>
+        <div class="desc">Get all active decks</div>
+        <pre class="response">[{"id":1,"name":"Core 2k"}]</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/v1/status/counts</code><br>
+        <div class="desc">Get aggregated word status counts</div>
+        Query: <code>?deckId=123&lang=ja</code> (both optional)<br>
+        <pre class="response">[{"known_count":606,"learning_count":79,"unknown_count":2551,"ignored_count":4}]</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/v1/tables</code><br>
+        <div class="desc">List all database tables</div>
+        <pre class="response">[{"name":"WordList"},{"name":"deck"}]</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/v1/words/difficult</code><br>
+        <div class="desc">Get words with highest fail rates (min 5 reviews)</div>
+        Query: <code>?lang=ja&limit=50&deckId=123</code><br>
+        • <code>lang</code> (required): Language code<br>
+        • <code>limit</code> (optional, default 50): Max results<br>
+        • <code>deckId</code> (optional): Filter by deck<br>
+        <pre class="response">[{"dictForm":"難","secondary":"かた","partOfSpeech":"suffix","knownStatus":"LEARNING","total_reviews":15,"failed_reviews":8,"fail_rate":53.33}]</pre>
+    </div>
+    
+    <h2>Utility:</h2>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/utility/database/schema</code><br>
+        <div class="desc">Get the complete database schema with all tables and their column definitions</div>
+        <pre class="response">{
+  "WordList": {
+    "dictForm": {"type":"TEXT","notNull":true,"primaryKey":false},
+    "secondary": {"type":"TEXT","notNull":true,"primaryKey":false},
+    "knownStatus": {"type":"TEXT","notNull":false,"primaryKey":false}
+  },
+  "card": {
+    "id": {"type":"TEXT","notNull":true,"primaryKey":true},
+    "interval": {"type":"INTEGER","notNull":false,"primaryKey":false}
+  }
+}</pre>
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">POST</span> <code>/utility/cache/clear</code><br>
+        <div class="desc">Clear the in-memory cache</div>
+        <pre class="response">{"message":"Cache cleared successfully"}</pre>
+    </div>
+</body>
+</html>
