@@ -61,20 +61,20 @@ func runQuery[T any](app *Application, query string, params ...any) ([]T, error)
     // Get SQLite blob from IndexedDB
     const getMigakuSQLiteBlob = () => new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_CONFIG.DB_NAME);
-        
+
         request.onerror = (event) => reject(event.target.error);
-        
+
         request.onsuccess = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains(DB_CONFIG.OBJECT_STORE)) {
                 reject('Object store not found');
                 return;
             }
-            
+
             const tx = db.transaction([DB_CONFIG.OBJECT_STORE], 'readonly');
             const store = tx.objectStore(DB_CONFIG.OBJECT_STORE);
             const getAllReq = store.getAll();
-            
+
             getAllReq.onsuccess = () => {
                 const records = getAllReq.result;
                 if (!records.length || !records[0].data) {
@@ -83,7 +83,7 @@ func runQuery[T any](app *Application, query string, params ...any) ([]T, error)
                 }
                 resolve(records[0].data);
             };
-            
+
             getAllReq.onerror = (err) => reject(err.target.error);
         };
     });
@@ -91,25 +91,25 @@ func runQuery[T any](app *Application, query string, params ...any) ([]T, error)
     // Main execution
     const blob = await getMigakuSQLiteBlob();
     const decompressed = pako.inflate(blob);
-    
+
     const SQL = await initSqlJs({
         locateFile: (file) => DB_CONFIG.SQL_CDN_PATH + file,
     });
-    
+
     const db = new SQL.Database(decompressed);
-    
+
     // Run the query with parameters
     const query = %s;
     const params = %s;
-    
+
     let result;
     if (params.length > 0) {
         const stmt = db.prepare(query);
         stmt.bind(params);
-        
+
         const columns = stmt.getColumnNames();
         const jsonResult = [];
-        
+
         while (stmt.step()) {
             const row = stmt.get();
             let obj = {};
@@ -122,15 +122,15 @@ func runQuery[T any](app *Application, query string, params ...any) ([]T, error)
         result = jsonResult;
     } else {
         const execResult = db.exec(query);
-        
+
         if (!execResult.length) {
             db.close();
             return [];
         }
-        
+
         const rows = execResult[0].values;
         const columns = execResult[0].columns;
-        
+
         result = rows.map(row => {
             let obj = {};
             columns.forEach((col, index) => {
@@ -139,7 +139,7 @@ func runQuery[T any](app *Application, query string, params ...any) ([]T, error)
             return obj;
         });
     }
-    
+
     db.close();
     return result;
 })()
