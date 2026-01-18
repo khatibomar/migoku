@@ -28,12 +28,6 @@
     <h2>Available Endpoints:</h2>
     
     <div class="endpoint">
-        <span class="method">GET</span> <code>/api/status</code><br>
-        <div class="desc">Get server status and configuration</div>
-        <pre class="response">{"status":"running","authenticated":true,"cache_ttl":"5m0s","headless":true}</pre>
-    </div>
-    
-    <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/words</code><br>
         <div class="desc">Get words with optional filters</div>
         Query Parameters:<br>
@@ -138,6 +132,12 @@
     </div>
 
     <h2>Dev:</h2>
+
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/dev/status</code><br>
+        <div class="desc">Get server status and configuration</div>
+        <pre class="response">{"status":"running","authenticated":true,"cache_ttl":"5m0s","headless":true}</pre>
+    </div>
 
     <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/tables</code><br>

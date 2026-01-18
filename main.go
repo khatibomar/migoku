@@ -130,7 +130,6 @@ func realMain(logger *slog.Logger) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", chainMiddlewares(app.handleRoot, app.corsMiddleware))
-	mux.HandleFunc("GET /api/status", chainMiddlewares(app.handleStatus, app.corsMiddleware))
 
 	v1 := http.NewServeMux()
 	v1.HandleFunc("GET /words", chainMiddlewares(app.handleWords, app.corsMiddleware, app.authMiddleware))
@@ -145,6 +144,7 @@ func realMain(logger *slog.Logger) error {
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
 
 	utility := http.NewServeMux()
+	utility.HandleFunc("GET /status", chainMiddlewares(app.handleStatus, app.corsMiddleware, app.authMiddleware))
 	utility.HandleFunc("GET /database/schema", chainMiddlewares(app.handleDatabaseSchema, app.corsMiddleware, app.authMiddleware))
 	utility.HandleFunc("POST /cache/clear", chainMiddlewares(app.handleClearCache, app.corsMiddleware, app.authMiddleware))
 	utility.HandleFunc("GET /tables", chainMiddlewares(app.handleTables, app.corsMiddleware, app.authMiddleware))
