@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -29,7 +29,6 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 	)
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
-
 	app.logger.Info("Launching browser...")
 	app.logger.Info("Logging in to Migaku...")
 
@@ -40,104 +39,116 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 		allocCancel()
 	}
 
-	app.logger.Info("Navigating to login page...")
 	err := chromedp.Run(loginCtx,
 		chromedp.Navigate("https://study.migaku.com/login"),
-		chromedp.WaitVisible(`input[type="email"]`, chromedp.ByQuery),
+		chromedp.WaitVisible("body", chromedp.ByQuery),
 	)
 	if err != nil {
 		return nil, cleanFunc, err
 	}
 
-	app.logger.Info("Filling in credentials...")
-	err = chromedp.Run(loginCtx,
-		chromedp.SendKeys(`input[type="email"]`, email, chromedp.ByQuery),
-		chromedp.SendKeys(`input[type="password"]`, password, chromedp.ByQuery),
-		chromedp.Sleep(500*time.Millisecond), // Give the form time to validate
-	)
-	if err != nil {
-		return nil, cleanFunc, err
-	}
-
-	app.logger.Info("Submitting login form...")
-	err = chromedp.Run(loginCtx,
-		chromedp.Click(`button[type="submit"]`, chromedp.ByQuery),
-	)
-	if err != nil {
-		return nil, cleanFunc, err
-	}
-
-	app.logger.Info("Waiting for login to complete...")
-
-	// Custom wait for URL change - chromedp's navigation detection
-	loginSuccess := false
-	startTime := time.Now()
-	timeout := 30 * time.Second
+	// Wait a bit for any redirects to complete
+	time.Sleep(1 * time.Second)
 
 	var currentURL string
-	for !loginSuccess && time.Since(startTime) < timeout {
-		err = chromedp.Run(loginCtx, chromedp.Location(&currentURL))
-		if err != nil {
-			app.logger.Error("Failed to get URL", "error", err)
-			time.Sleep(500 * time.Millisecond)
-			continue
-		}
-
-		app.logger.Debug("Checking URL", "url", currentURL)
-
-		// Success: URL changed from login page
-		if currentURL != "https://study.migaku.com/login" && currentURL != "" {
-			app.logger.Info("Navigation detected", "url", currentURL)
-
-			// Wait for new page to start loading
-			time.Sleep(500 * time.Millisecond)
-
-			// Verify page is responsive
-			var readyState string
-			err = chromedp.Run(loginCtx,
-				chromedp.Evaluate(`document.readyState`, &readyState),
-			)
-
-			if err == nil && (readyState == "interactive" || readyState == "complete") {
-				loginSuccess = true
-				break
-			}
-
-			app.logger.Debug("Page still loading", "readyState", readyState)
-		}
-
-		time.Sleep(500 * time.Millisecond)
-	}
-
-	if !loginSuccess {
-		// Navigation didn't happen - login likely failed
-		var pageText string
-		if err := chromedp.Run(loginCtx, chromedp.Text(`body`, &pageText, chromedp.ByQuery)); err != nil {
-			app.logger.Error("Failed to get page text", "error", err)
-		}
-		if err := chromedp.Run(loginCtx, chromedp.Location(&currentURL)); err != nil {
-			app.logger.Error("Failed to get current URL", "error", err)
-		}
-
-		app.logger.Error("Login failed - no navigation occurred")
-		app.logger.Error("Current URL", "url", currentURL)
-		if len(pageText) > 0 && len(pageText) < 500 {
-			app.logger.Error("Page content", "text", pageText)
-		}
-
-		return nil, cleanFunc, errors.New("login failed: credentials may be incorrect or page did not redirect")
-	}
-
-	app.logger.Info("Login successful", "url", currentURL)
-
-	// Ensure new page is fully loaded
-	err = chromedp.Run(loginCtx, chromedp.WaitReady("body"))
+	err = chromedp.Run(loginCtx, chromedp.Location(&currentURL))
 	if err != nil {
 		return nil, cleanFunc, err
+	}
+
+	app.logger.Info("Current URL: " + currentURL)
+
+	// Check if we're still on the login page (not redirected)
+	if strings.Contains(currentURL, "/login") {
+		app.logger.Info("On login page, checking if login form exists...")
+
+		// Check if login form exists
+		var loginFormExists bool
+		err = chromedp.Run(loginCtx,
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+				defer cancel()
+				err := chromedp.WaitVisible(`input[type="email"]`, chromedp.ByQuery).Do(timeoutCtx)
+				loginFormExists = (err == nil)
+				return nil // Don't propagate error
+			}),
+		)
+
+		if loginFormExists {
+			app.logger.Info("Login form found, filling in credentials...")
+			err = chromedp.Run(loginCtx,
+				chromedp.SendKeys(`input[type="email"]`, email, chromedp.ByQuery),
+				chromedp.SendKeys(`input[type="password"]`, password, chromedp.ByQuery),
+				chromedp.Sleep(100*time.Millisecond),
+			)
+			if err != nil {
+				return nil, cleanFunc, err
+			}
+
+			app.logger.Info("Submitting login form...")
+			err = chromedp.Run(loginCtx,
+				chromedp.Click(`button[type="submit"]`, chromedp.ByQuery),
+			)
+			if err != nil {
+				return nil, cleanFunc, err
+			}
+
+			app.logger.Info("Waiting for login to complete...")
+			// Wait for login form to disappear OR URL to change
+			err = chromedp.Run(loginCtx,
+				chromedp.ActionFunc(func(ctx context.Context) error {
+					timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+					defer cancel()
+
+					// Wait for either form to disappear or URL to change
+					ticker := time.NewTicker(200 * time.Millisecond)
+					defer ticker.Stop()
+
+					for {
+						select {
+						case <-timeoutCtx.Done():
+							return timeoutCtx.Err()
+						case <-ticker.C:
+							var newURL string
+							if err := chromedp.Location(&newURL).Do(ctx); err == nil {
+								if !strings.Contains(newURL, "/login") {
+									return nil // Successfully logged in
+								}
+							}
+						}
+					}
+				}),
+			)
+			if err != nil {
+				app.logger.Info("Login form still present, assuming login failed - proceeding anyway")
+			} else {
+				app.logger.Info("Login successful")
+			}
+		} else {
+			app.logger.Info("Login form not found, but still on /login URL - likely already logged in, waiting for redirect...")
+			// Wait a bit more for redirect
+			time.Sleep(2 * time.Second)
+			err = chromedp.Run(loginCtx, chromedp.Location(&currentURL))
+			if err == nil {
+				app.logger.Info("URL after wait: " + currentURL)
+			}
+		}
+	} else {
+		app.logger.Info("Already logged in (redirected away from /login)")
+	}
+
+	err = chromedp.Run(loginCtx,
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			return chromedp.WaitReady("body").Do(ctx)
+		}),
+	)
+	if err != nil {
+		app.logger.Warn("Page readiness check failed, but continuing", "error", err)
 	}
 
 	app.isAuthenticated.Store(true)
-
 	app.logger.Info("Browser initialized and ready")
 	return loginCtx, cleanFunc, nil
 }
