@@ -145,27 +145,15 @@ func runQuery[T any](app *Application, query string, params ...any) ([]T, error)
 })()
 `, "`"+query+"`", paramsJSON)
 
-	var rawResult []map[string]any
-
 	awaitPromise := func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
 		return p.WithAwaitPromise(true)
 	}
 
-	app.logger.Info("Evaluating JavaScript in browser...")
-	if err := chromedp.Run(app.browserCtx, chromedp.Evaluate(script, &rawResult, awaitPromise)); err != nil {
+	var result []T
+	eval := chromedp.Evaluate(script, &result, awaitPromise)
+	if err := chromedp.Run(app.browserCtx, eval); err != nil {
 		app.logger.Error("Query execution failed", "error", err)
 		return nil, fmt.Errorf("failed to execute query: %w", err)
-	}
-
-	// Convert raw result to generic type T
-	resultBytes, err := json.Marshal(rawResult)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
-	var result []T
-	if err := json.Unmarshal(resultBytes, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal result: %w", err)
 	}
 
 	app.logger.Info("Query completed", "rows", len(result))

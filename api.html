@@ -62,12 +62,6 @@
     </div>
     
     <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/tables</code><br>
-        <div class="desc">List all database tables</div>
-        <pre class="response">[{"name":"WordList"},{"name":"deck"}]</pre>
-    </div>
-    
-    <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/words/difficult</code><br>
         <div class="desc">Get words with highest fail rates (min 5 reviews)</div>
         Query: <code>?lang=ja&limit=50&deckId=123</code><br>
@@ -76,11 +70,83 @@
         • <code>deckId</code> (optional): Filter by deck<br>
         <pre class="response">[{"dictForm":"難","secondary":"かた","partOfSpeech":"suffix","knownStatus":"LEARNING","total_reviews":15,"failed_reviews":8,"fail_rate":53.33}]</pre>
     </div>
-    
-    <h2>Utility:</h2>
-    
+
+    <h2>Statistics:</h2>
+
     <div class="endpoint">
-        <span class="method">GET</span> <code>/utility/database/schema</code><br>
+        <span class="method">GET</span> <code>/api/v1/stats/words</code><br>
+        <div class="desc">Get aggregated word status counts for a language, optionally filtered by deck</div>
+        Query: <code>?lang=ja&deckId=123</code><br>
+        • <code>lang</code> (required): Language code (e.g., <code>ja</code>)<br>
+        • <code>deckId</code> (optional): Deck ID, or omit / use <code>all</code> for all decks<br>
+        <pre class="response">{"known_count":606,"learning_count":79,"unknown_count":2551,"ignored_count":4}</pre>
+    </div>
+
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/v1/stats/due</code><br>
+        <div class="desc">Get forecast of cards due per day for a given period</div>
+        Query: <code>?lang=ja&deckId=123&periodId=1%20Month</code><br>
+        • <code>lang</code> (required): Language code<br>
+        • <code>deckId</code> (optional): Deck ID, or omit / use <code>all</code> for all decks<br>
+        • <code>periodId</code> (optional, default <code>1 Month</code>): One of <code>1 Month</code>, <code>2 Months</code>, <code>3 Months</code>, <code>6 Months</code>, <code>1 Year</code>, <code>All time</code><br>
+        <pre class="response">{
+  "labels": ["Jan 1, 2024", "Jan 2, 2024"],
+  "counts": [10, 15],
+  "knownCounts": [4, 7],
+  "learningCounts": [6, 8]
+}</pre>
+    </div>
+
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/v1/stats/intervals</code><br>
+        <div class="desc">Get distribution of card intervals up to a given percentile</div>
+        Query: <code>?lang=ja&deckId=123&percentileId=75th</code><br>
+        • <code>lang</code> (required): Language code<br>
+        • <code>deckId</code> (optional): Deck ID, or omit / use <code>all</code> for all decks<br>
+        • <code>percentileId</code> (optional, default <code>75th</code>): e.g., <code>50th</code>, <code>75th</code>, <code>90th</code><br>
+        <pre class="response">{
+  "labels": ["1 day", "2 days", "3 days"],
+  "counts": [120, 90, 60]
+}</pre>
+    </div>
+
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/v1/stats/study</code><br>
+        <div class="desc">Get study statistics over a time period for reviews and new cards</div>
+        Query: <code>?lang=ja&deckId=123&periodId=1%20Month</code><br>
+        • <code>lang</code> (required): Language code<br>
+        • <code>deckId</code> (optional): Deck ID, or omit / use <code>all</code> for all decks<br>
+        • <code>periodId</code> (optional, default <code>1 Month</code>): One of <code>1 Month</code>, <code>2 Months</code>, <code>3 Months</code>, <code>6 Months</code>, <code>1 Year</code>, <code>All time</code><br>
+        <pre class="response">{
+  "days_studied": 24,
+  "days_studied_percent": 80,
+  "total_reviews": 950,
+  "avg_reviews_per_calendar_day": 39.6,
+  "period_days": 30,
+  "pass_rate": 92,
+  "new_cards_per_day": 8.3,
+  "total_new_cards": 250,
+  "total_cards_added": 260,
+  "cards_added_per_day": 8.7,
+  "total_cards_learned": 180,
+  "cards_learned_per_day": 6.2,
+  "total_time_new_cards_seconds": 5400,
+  "avg_time_new_card_seconds": 12.3,
+  "total_time_reviews_seconds": 15200,
+  "avg_time_review_seconds": 9.4
+}</pre>
+    </div>
+
+    <h2>Dev:</h2>
+
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/api/v1/tables</code><br>
+        <div class="desc">List all database tables</div>
+        <pre class="response">[{"name":"WordList"},{"name":"deck"}]</pre>
+    </div>
+
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/dev/database/schema</code><br>
         <div class="desc">Get the complete database schema with all tables and their column definitions</div>
         <pre class="response">{
   "WordList": {
@@ -96,9 +162,9 @@
     </div>
     
     <div class="endpoint">
-        <span class="method">POST</span> <code>/utility/cache/clear</code><br>
+        <span class="method">POST</span> <code>/dev/cache/clear</code><br>
         <div class="desc">Clear the in-memory cache</div>
-        <pre class="response">{"message":"Cache cleared successfully"}</pre>
+        <pre class="response">{"status":"success","message":"Cache cleared successfully"}</pre>
     </div>
 </body>
 </html>
