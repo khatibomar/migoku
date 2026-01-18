@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -11,12 +13,19 @@ import (
 func (app *Application) initializeBrowser(email, password string) (context.Context, func(), error) {
 	app.isAuthenticated.Store(false)
 
+	userDataDir := filepath.Join(os.TempDir(), "chromedp-user-data")
+	if err := os.MkdirAll(userDataDir, os.ModePerm); err != nil {
+		app.logger.Error("failed to get temp user data dir", "error", err)
+		return nil, nil, err
+	}
+
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", app.headless),
 		chromedp.Flag("disable-gpu", false),
 		chromedp.Flag("enable-automation", false),
 		chromedp.Flag("disable-dev-shm-usage", true),
 		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+		chromedp.UserDataDir(userDataDir),
 	)
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
