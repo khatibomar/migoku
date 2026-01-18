@@ -12,7 +12,6 @@ import (
 
 func (app *Application) initializeBrowser(email, password string) (context.Context, func(), error) {
 	app.isAuthenticated.Store(false)
-
 	userDataDir := filepath.Join(os.TempDir(), "chromedp-user-data")
 	if err := os.MkdirAll(userDataDir, os.ModePerm); err != nil {
 		app.logger.Error("failed to get temp user data dir", "error", err)
@@ -73,6 +72,10 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 				return nil // Don't propagate error
 			}),
 		)
+		if err != nil {
+			app.logger.Error("Error checking for login form", "error", err)
+			return nil, cleanFunc, err
+		}
 
 		if loginFormExists {
 			app.logger.Info("Login form found, filling in credentials...")
