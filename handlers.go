@@ -118,6 +118,97 @@ func (app *Application) handleDifficultWords(w http.ResponseWriter, r *http.Requ
 	app.respondJSON(w, words)
 }
 
+func (app *Application) handleWordStats(w http.ResponseWriter, r *http.Request) {
+	lang := r.URL.Query().Get("lang")
+	if lang == "" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
+			app.logger.Error("Failed to write error response", "error", err)
+		}
+		return
+	}
+
+	deckID := r.URL.Query().Get("deckId")
+
+	stats, err := app.service.GetWordStats(lang, deckID)
+	if err != nil {
+		app.logger.Error("Failed to get word stats", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	app.respondJSON(w, stats)
+}
+
+func (app *Application) handleDueStats(w http.ResponseWriter, r *http.Request) {
+	lang := r.URL.Query().Get("lang")
+	if lang == "" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
+			app.logger.Error("Failed to write error response", "error", err)
+		}
+		return
+	}
+
+	deckID := r.URL.Query().Get("deckId")
+	periodId := r.URL.Query().Get("periodId")
+
+	stats, err := app.service.GetDueStats(lang, deckID, periodId)
+	if err != nil {
+		app.logger.Error("Failed to get due stats", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	app.respondJSON(w, stats)
+}
+
+func (app *Application) handleIntervalStats(w http.ResponseWriter, r *http.Request) {
+	lang := r.URL.Query().Get("lang")
+	if lang == "" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
+			app.logger.Error("Failed to write error response", "error", err)
+		}
+		return
+	}
+
+	deckID := r.URL.Query().Get("deckId")
+	percentileId := r.URL.Query().Get("percentileId")
+
+	stats, err := app.service.GetIntervalStats(lang, deckID, percentileId)
+	if err != nil {
+		app.logger.Error("Failed to get interval stats", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	app.respondJSON(w, stats)
+}
+
+func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request) {
+	lang := r.URL.Query().Get("lang")
+	if lang == "" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
+			app.logger.Error("Failed to write error response", "error", err)
+		}
+		return
+	}
+
+	deckID := r.URL.Query().Get("deckId")
+	periodId := r.URL.Query().Get("periodId")
+
+	stats, err := app.service.GetStudyStats(lang, deckID, periodId)
+	if err != nil {
+		app.logger.Error("Failed to get study stats", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	app.respondJSON(w, stats)
+}
+
 func (app *Application) handleStatus(w http.ResponseWriter, r *http.Request) {
 	isAuth := app.isAuthenticated.Load()
 
