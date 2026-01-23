@@ -19,14 +19,14 @@
     <h1>Migoku API</h1>
     <p>Access your Migaku database through REST API with in-memory caching and parameterized queries for security.</p>
     <p><strong>Note:</strong> Migoku is an unofficial community-made utility that provides API access to your local Migaku data.</p>
-    
+
     <div class="auth-info">
         <strong>Authentication:</strong> If API_SECRET is configured, include it in requests:<br>
         <code>X-API-Key: your-secret</code> or <code>Authorization: Bearer your-secret</code>
     </div>
-    
+
     <h2>Available Endpoints:</h2>
-    
+
     <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/words</code><br>
         <div class="desc">Get words with optional filters</div>
@@ -41,20 +41,20 @@
         • <code>/api/v1/words?status=learning&lang=ja</code> - Japanese learning words<br>
         <pre class="response">[{"dictForm":"本","secondary":"ほん","knownStatus":"KNOWN"}]</pre>
     </div>
-    
+
     <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/decks</code><br>
         <div class="desc">Get all active decks</div>
         <pre class="response">[{"id":1,"name":"Core 2k"}]</pre>
     </div>
-    
+
     <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/status/counts</code><br>
         <div class="desc">Get aggregated word status counts</div>
         Query: <code>?deckId=123&lang=ja</code> (both optional)<br>
         <pre class="response">[{"known_count":606,"learning_count":79,"unknown_count":2551,"ignored_count":4}]</pre>
     </div>
-    
+
     <div class="endpoint">
         <span class="method">GET</span> <code>/api/v1/words/difficult</code><br>
         <div class="desc">Get words with highest fail rates (min 5 reviews)</div>
@@ -140,7 +140,7 @@
     </div>
 
     <div class="endpoint">
-        <span class="method">GET</span> <code>/api/v1/tables</code><br>
+        <span class="method">GET</span> <code>/dev/tables</code><br>
         <div class="desc">List all database tables</div>
         <pre class="response">[{"name":"WordList"},{"name":"deck"}]</pre>
     </div>
@@ -160,7 +160,7 @@
   }
 }</pre>
     </div>
-    
+
     <div class="endpoint">
         <span class="method">POST</span> <code>/dev/cache/clear</code><br>
         <div class="desc">Clear the in-memory cache</div>
