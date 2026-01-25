@@ -5,11 +5,25 @@
     return { ok: false, reason: "invalid_status" };
   }
 
-  const wordText = (payload.wordText || "").trim();
-  const secondary = (payload.secondary || "").trim();
-  const searchValue = (wordText || secondary || "").trim();
+  const rawItems =
+    Array.isArray(payload.items) && payload.items.length
+      ? payload.items
+      : [{ wordText: payload.wordText, secondary: payload.secondary }];
+  const items = rawItems
+    .map((item) => ({
+      wordText: (item?.wordText || "").trim(),
+      secondary: (item?.secondary || "").trim(),
+    }))
+    .filter((item) => item.wordText);
+  if (!items.length) {
+    return { ok: false, reason: "missing_word_text" };
+  }
+
+  const searchValue = [...new Set(items.map((item) => item.wordText))].join(
+    " ",
+  );
   if (!searchValue) {
-    return { ok: false, reason: "missing_search_term" };
+    return { ok: false, reason: "missing_word_text" };
   }
 
   const raf = () => new Promise(requestAnimationFrame);
@@ -17,7 +31,7 @@
   const timeoutMs = 12000;
   const rowTimeoutMs = 3000;
   const listSettleIdleMs = 150;
-  const listSettleTimeoutMs = 1200;
+  const listSettleTimeoutMs = rowTimeoutMs;
   const waitFor = async (fn, limitMs = timeoutMs) => {
     const start = performance.now();
     while (performance.now() - start < limitMs) {
@@ -89,7 +103,7 @@
   };
   await applySearchValue();
 
-  const matchesRow = (row) => {
+  const matchesRow = (row, item) => {
     const primaryText =
       row
         .querySelector(".WordBrowserList__labelContainer .-emphasis")
@@ -98,16 +112,10 @@
       row.querySelector(".WordBrowserList__secondary")?.textContent?.trim() ||
       "";
 
-    if (wordText && secondary) {
-      return primaryText === wordText && secondaryText === secondary;
+    if (item.secondary) {
+      return primaryText === item.wordText && secondaryText === item.secondary;
     }
-    if (wordText) {
-      return primaryText === wordText;
-    }
-    if (secondary) {
-      return secondaryText === secondary;
-    }
-    return false;
+    return primaryText === item.wordText;
   };
 
   const waitForListSettle = () =>
@@ -143,56 +151,22 @@
         subtree: true,
         characterData: true,
       });
-      settledTimer = setTimeout(() => finish(true), listSettleIdleMs);
       timeoutId = setTimeout(() => finish(null), listSettleTimeoutMs);
     });
 
-  const findRow = () =>
-    [...document.querySelectorAll(".UiDynamicList__item")].find(matchesRow);
+  const findRow = (item) =>
+    [...document.querySelectorAll(".UiDynamicList__item")].find((row) =>
+      matchesRow(row, item),
+    );
 
-  const waitForRowOrSettle = async () => {
+  const waitForRowOrSettle = async (item) => {
     const settled = waitForListSettle().then(() => null);
-    const row = await Promise.race([waitFor(findRow, rowTimeoutMs), settled]);
-    return row || findRow();
+    const row = await Promise.race([
+      waitFor(() => findRow(item), rowTimeoutMs),
+      settled,
+    ]);
+    return row || findRow(item);
   };
-
-  let row = await waitForRowOrSettle();
-  if (!row) {
-    await applySearchValue();
-    row = await waitForRowOrSettle();
-  }
-  if (!row) {
-    return { ok: false, reason: "row_not_found" };
-  }
-
-  row.scrollIntoView({ block: "center" });
-  row.click();
-
-  const changeStatusButton = await waitFor(() => {
-    const label = [
-      ...document.querySelectorAll("button .UiTypo__buttonText"),
-    ].find((el) => el.textContent?.trim() === "Change status");
-    const button = label?.closest("button");
-    if (!button) return null;
-    if (button.disabled || button.getAttribute("aria-disabled") === "true")
-      return null;
-    return button;
-  });
-  if (!changeStatusButton) {
-    return { ok: false, reason: "change_status_button_not_found" };
-  }
-
-  changeStatusButton.click();
-
-  const actionText = await waitFor(() => {
-    const matches = [...document.querySelectorAll(".UiActionSheet__item__text")]
-      .filter((el) => el.textContent?.trim() === actionLabel)
-      .filter(isVisible);
-    return matches[matches.length - 1];
-  });
-  if (!actionText) {
-    return { ok: false, reason: "action_not_found" };
-  }
 
   const isGrey = (el) => {
     const button = el.closest("button");
@@ -204,11 +178,85 @@
     );
   };
 
-  await raf();
-  if (isGrey(actionText)) {
-    return { ok: false, reason: "action_disabled" };
+  const results = [];
+  let hadRetry = false;
+  for (const item of items) {
+    let row = await waitForRowOrSettle(item);
+    if (!row && !hadRetry) {
+      await applySearchValue();
+      row = await waitForRowOrSettle(item);
+      hadRetry = true;
+    }
+    if (!row) {
+      results.push({
+        wordText: item.wordText,
+        secondary: item.secondary,
+        ok: false,
+        reason: "row_not_found",
+      });
+      continue;
+    }
+
+    row.scrollIntoView({ block: "center" });
+    row.click();
+
+    const changeStatusButton = await waitFor(() => {
+      const label = [
+        ...document.querySelectorAll("button .UiTypo__buttonText"),
+      ].find((el) => el.textContent?.trim() === "Change status");
+      const button = label?.closest("button");
+      if (!button) return null;
+      if (button.disabled || button.getAttribute("aria-disabled") === "true")
+        return null;
+      return button;
+    });
+    if (!changeStatusButton) {
+      results.push({
+        wordText: item.wordText,
+        secondary: item.secondary,
+        ok: false,
+        reason: "change_status_button_not_found",
+      });
+      continue;
+    }
+
+    changeStatusButton.click();
+
+    const actionText = await waitFor(() => {
+      const matches = [...document.querySelectorAll(".UiActionSheet__item__text")]
+        .filter((el) => el.textContent?.trim() === actionLabel)
+        .filter(isVisible);
+      return matches[matches.length - 1];
+    });
+    if (!actionText) {
+      results.push({
+        wordText: item.wordText,
+        secondary: item.secondary,
+        ok: false,
+        reason: "action_not_found",
+      });
+      continue;
+    }
+
+    await raf();
+    if (isGrey(actionText)) {
+      results.push({
+        wordText: item.wordText,
+        secondary: item.secondary,
+        ok: false,
+        reason: "action_disabled",
+      });
+      continue;
+    }
+
+    actionText.closest("button")?.click();
+    results.push({
+      wordText: item.wordText,
+      secondary: item.secondary,
+      ok: true,
+    });
   }
 
-  actionText.closest("button")?.click();
-  return { ok: true };
+  const ok = results.length > 0 && results.every((result) => result.ok);
+  return { ok, results };
 })();
