@@ -47,6 +47,7 @@ Environment variables:
 - `API_SECRET` - API key for authentication (optional, enables auth if set)
 - `CACHE_TTL` - Cache duration (default: 5m)
 - `LOG_LEVEL` - Log level: DEBUG, INFO, WARN, ERROR (default: INFO)
+- `TARGET_LANG` - Optional language selection when Migaku prompts (use language code like `ja` or name like `Japanese`)
 
 ## Development
 
@@ -74,4 +75,4 @@ make docker-run
 
 ## Credits
 
-Thanks to [https://github.com/SebastianGuadalupe/MigakuStats](https://github.com/SebastianGuadalupe/MigakuStats) I learned how migaku works by reading the plugin.
+Thanks to [https://github.com/SebastianGuadalupe/MigakuStats](https://github.com/SebastianGuadalupe/MigakuStats) I learned how Migaku works by reading the plugin.

@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +13,15 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func (app *Application) initializeBrowser(email, password string) (context.Context, func(), error) {
+type languageSelectionResult struct {
+	Clicked bool   `json:"clicked"`
+	Method  string `json:"method,omitempty"`
+}
+
+//go:embed snippets/language_select.js
+var languageSelectionScript string
+
+func (app *Application) initializeBrowser(email, password, language string) (context.Context, func(), error) {
 	app.isAuthenticated.Store(false)
 	userDataDir := filepath.Join(os.TempDir(), "chromedp-user-data")
 	if err := os.MkdirAll(userDataDir, os.ModePerm); err != nil {
@@ -151,7 +162,52 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 		app.logger.Warn("Page readiness check failed, but continuing", "error", err)
 	}
 
+	if err := app.handleLanguageSelection(loginCtx, language); err != nil {
+		return nil, cleanFunc, err
+	}
+
 	app.isAuthenticated.Store(true)
 	app.logger.Info("Browser initialized and ready")
 	return loginCtx, cleanFunc, nil
+}
+
+func (app *Application) handleLanguageSelection(ctx context.Context, language string) error {
+	var currentURL string
+	if err := chromedp.Run(ctx, chromedp.Location(&currentURL)); err != nil {
+		return err
+	}
+
+	if !strings.Contains(currentURL, "selectLanguage=true") {
+		return nil
+	}
+
+	normalized := strings.ToLower(strings.TrimSpace(language))
+	if normalized == "" {
+		return fmt.Errorf("language selection required: set TARGET_LANG env var to a Migaku language code or name")
+	}
+
+	app.logger.Info("Language selection required", "language", normalized)
+
+	if err := chromedp.Run(ctx, chromedp.WaitVisible(".LanguageSelect__option", chromedp.ByQuery)); err != nil {
+		return err
+	}
+
+	langJSON, err := json.Marshal(normalized)
+	if err != nil {
+		return fmt.Errorf("failed to marshal language selection: %w", err)
+	}
+
+	script := strings.Replace(languageSelectionScript, "__LANG__", string(langJSON), 1)
+
+	var result languageSelectionResult
+	if err := chromedp.Run(ctx, chromedp.Evaluate(script, &result)); err != nil {
+		return err
+	}
+
+	if !result.Clicked {
+		return fmt.Errorf("language option not found for %q", normalized)
+	}
+
+	app.logger.Info("Language selected", "language", normalized, "method", result.Method)
+	return nil
 }

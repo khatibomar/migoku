@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 //go:embed api.html
@@ -16,6 +17,12 @@ func (app *Application) respondJSON(w http.ResponseWriter, data any) {
 	if err != nil {
 		app.logger.Error("Failed to encode JSON response", "error", err)
 	}
+}
+
+type wordStatusRequest struct {
+	Status    string `json:"status"`
+	WordText  string `json:"wordText"`
+	Secondary string `json:"secondary"`
 }
 
 func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
@@ -39,6 +46,64 @@ func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app.respondJSON(w, words)
+}
+
+func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Request) {
+	var req wordStatusRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		app.respondJSON(w, map[string]string{
+			"error":   "invalid json",
+			"message": "Request body must be valid JSON",
+		})
+		return
+	}
+
+	req.Status = strings.ToLower(strings.TrimSpace(req.Status))
+	req.WordText = strings.TrimSpace(req.WordText)
+	req.Secondary = strings.TrimSpace(req.Secondary)
+
+	if req.Status == "" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		app.respondJSON(w, map[string]string{
+			"error":   "missing parameters",
+			"message": "status is required",
+		})
+		return
+	}
+
+	if _, _, ok := normalizeWordStatus(req.Status); !ok {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		app.respondJSON(w, map[string]string{
+			"error":   "invalid status",
+			"message": "Status must be one of: known, learning, tracked, ignored",
+		})
+		return
+	}
+
+	if req.WordText == "" && req.Secondary == "" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		app.respondJSON(w, map[string]string{
+			"error":   "missing parameters",
+			"message": "wordText or secondary is required",
+		})
+		return
+	}
+
+	result, err := app.service.SetWordStatus(req.WordText, req.Secondary, req.Status)
+	if err != nil {
+		app.logger.Error("Failed to update word status", "error", err, "status", req.Status, "wordText", req.WordText, "secondary", req.Secondary)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	app.respondJSON(w, result)
 }
 
 func (app *Application) handleDecks(w http.ResponseWriter, r *http.Request) {
