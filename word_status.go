@@ -79,7 +79,7 @@ func (s *MigakuService) setWordStatusItems(items []WordStatusItem, status string
 		return nil, errors.New("browser not authenticated")
 	}
 
-	status, actionLabel, ok := normalizeWordStatus(status)
+	_, actionLabel, ok := normalizeWordStatus(status)
 	if !ok {
 		return nil, errors.New("invalid status: must be one of: known, learning, tracked, ignored")
 	}
