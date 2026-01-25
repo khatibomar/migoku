@@ -20,9 +20,10 @@ func (app *Application) respondJSON(w http.ResponseWriter, data any) {
 }
 
 type wordStatusRequest struct {
-	Status    string `json:"status"`
-	WordText  string `json:"wordText"`
-	Secondary string `json:"secondary"`
+	Status    string           `json:"status"`
+	WordText  string           `json:"wordText"`
+	Secondary string           `json:"secondary"`
+	Items     []WordStatusItem `json:"items"`
 }
 
 func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
@@ -86,13 +87,46 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if req.WordText == "" && req.Secondary == "" {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		app.respondJSON(w, map[string]string{
-			"error":   "missing parameters",
-			"message": "wordText or secondary is required",
-		})
+	if len(req.Items) == 0 {
+		if req.WordText == "" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			app.respondJSON(w, map[string]string{
+				"error":   "missing parameters",
+				"message": "wordText is required",
+			})
+			return
+		}
+	}
+
+	if len(req.Items) > 0 {
+		items := make([]WordStatusItem, 0, len(req.Items))
+		for _, item := range req.Items {
+			wordText := strings.TrimSpace(item.WordText)
+			secondary := strings.TrimSpace(item.Secondary)
+			if wordText == "" {
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
+				w.WriteHeader(http.StatusBadRequest)
+				app.respondJSON(w, map[string]string{
+					"error":   "missing parameters",
+					"message": "wordText is required for each item",
+				})
+				return
+			}
+			items = append(items, WordStatusItem{
+				WordText:  wordText,
+				Secondary: secondary,
+			})
+		}
+
+		result, err := app.service.SetWordStatusBatch(items, req.Status)
+		if err != nil {
+			app.logger.Error("Failed to update word status batch", "error", err, "status", req.Status, "count", len(items))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		app.respondJSON(w, result)
 		return
 	}
 
