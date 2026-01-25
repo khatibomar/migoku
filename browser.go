@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,12 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func (app *Application) initializeBrowser(email, password string) (context.Context, func(), error) {
+type languageSelectionResult struct {
+	Clicked bool   `json:"clicked"`
+	Method  string `json:"method,omitempty"`
+}
+
+func (app *Application) initializeBrowser(email, password, language string) (context.Context, func(), error) {
 	app.isAuthenticated.Store(false)
 	userDataDir := filepath.Join(os.TempDir(), "chromedp-user-data")
 	if err := os.MkdirAll(userDataDir, os.ModePerm); err != nil {
@@ -151,7 +157,78 @@ func (app *Application) initializeBrowser(email, password string) (context.Conte
 		app.logger.Warn("Page readiness check failed, but continuing", "error", err)
 	}
 
+	if err := app.handleLanguageSelection(loginCtx, language); err != nil {
+		return nil, cleanFunc, err
+	}
+
 	app.isAuthenticated.Store(true)
 	app.logger.Info("Browser initialized and ready")
 	return loginCtx, cleanFunc, nil
+}
+
+func (app *Application) handleLanguageSelection(ctx context.Context, language string) error {
+	var currentURL string
+	if err := chromedp.Run(ctx, chromedp.Location(&currentURL)); err != nil {
+		return err
+	}
+
+	if !strings.Contains(currentURL, "selectLanguage=true") {
+		return nil
+	}
+
+	normalized := strings.ToLower(strings.TrimSpace(language))
+	if normalized == "" {
+		return fmt.Errorf("language selection required: set MIGOKU_LANGUAGE env var to a Migaku language code or name")
+	}
+
+	app.logger.Info("Language selection required", "language", normalized)
+
+	if err := chromedp.Run(ctx, chromedp.WaitVisible(".LanguageSelect__option", chromedp.ByQuery)); err != nil {
+		return err
+	}
+
+	script := fmt.Sprintf(`(() => {
+  const raw = %q;
+  const normalized = raw.trim().toLowerCase();
+  if (!normalized) {
+    return { clicked: false, method: 'missing' };
+  }
+
+  const code = normalized.split(/[\\s,;:.]/)[0].split(/[_-]/)[0];
+  const candidates = Array.from(new Set([normalized, code].filter(Boolean)));
+
+  for (const candidate of candidates) {
+    const button = document.querySelector('button[aria-label="ID:LanguageSelect.' + candidate + '"]');
+    if (button) {
+      button.click();
+      return { clicked: true, method: 'aria' };
+    }
+  }
+
+  const options = [...document.querySelectorAll('button.LanguageSelect__option')];
+  const match = options.find((button) => {
+    const label = button.querySelector('.LanguageInfo .UiTypo');
+    const text = label?.textContent?.trim().toLowerCase() || '';
+    return text === normalized;
+  });
+
+  if (match) {
+    match.click();
+    return { clicked: true, method: 'text' };
+  }
+
+  return { clicked: false, method: 'not_found' };
+})()`, normalized)
+
+	var result languageSelectionResult
+	if err := chromedp.Run(ctx, chromedp.Evaluate(script, &result)); err != nil {
+		return err
+	}
+
+	if !result.Clicked {
+		return fmt.Errorf("language option not found for %q", normalized)
+	}
+
+	app.logger.Info("Language selected", "language", normalized, "method", result.Method)
+	return nil
 }

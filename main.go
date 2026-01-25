@@ -71,6 +71,7 @@ func realMain(logger *slog.Logger) error {
 	}
 	email := os.Getenv("EMAIL")
 	password := os.Getenv("PASSWORD")
+	language := strings.TrimSpace(os.Getenv("MIGOKU_LANGUAGE"))
 	if email == "" || password == "" {
 		logger.Error("Missing required credentials")
 		logger.Info("Please set EMAIL and PASSWORD environment variables")
@@ -107,7 +108,7 @@ func realMain(logger *slog.Logger) error {
 		logger:        logger,
 	}
 
-	browserCtx, cleanUp, err := app.initializeBrowser(email, password)
+	browserCtx, cleanUp, err := app.initializeBrowser(email, password, language)
 	defer cleanUp()
 	if err != nil {
 		logger.Error("Failed to initialize browser", "error", err)
@@ -133,6 +134,7 @@ func realMain(logger *slog.Logger) error {
 
 	v1 := http.NewServeMux()
 	v1.HandleFunc("GET /words", chainMiddlewares(app.handleWords, app.corsMiddleware, app.authMiddleware))
+	v1.HandleFunc("POST /words/status", chainMiddlewares(app.handleSetWordStatus, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("GET /decks", chainMiddlewares(app.handleDecks, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("GET /status/counts", chainMiddlewares(app.handleStatusCounts, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("GET /words/difficult", chainMiddlewares(app.handleDifficultWords, app.corsMiddleware, app.authMiddleware))
