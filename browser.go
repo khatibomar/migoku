@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +17,9 @@ type languageSelectionResult struct {
 	Clicked bool   `json:"clicked"`
 	Method  string `json:"method,omitempty"`
 }
+
+//go:embed snippets/language_select.js
+var languageSelectionScript string
 
 func (app *Application) initializeBrowser(email, password, language string) (context.Context, func(), error) {
 	app.isAuthenticated.Store(false)
@@ -187,38 +192,12 @@ func (app *Application) handleLanguageSelection(ctx context.Context, language st
 		return err
 	}
 
-	script := fmt.Sprintf(`(() => {
-  const raw = %q;
-  const normalized = raw.trim().toLowerCase();
-  if (!normalized) {
-    return { clicked: false, method: 'missing' };
-  }
+	langJSON, err := json.Marshal(normalized)
+	if err != nil {
+		return fmt.Errorf("failed to marshal language selection: %w", err)
+	}
 
-  const code = normalized.split(/[\\s,;:.]/)[0].split(/[_-]/)[0];
-  const candidates = Array.from(new Set([normalized, code].filter(Boolean)));
-
-  for (const candidate of candidates) {
-    const button = document.querySelector('button[aria-label="ID:LanguageSelect.' + candidate + '"]');
-    if (button) {
-      button.click();
-      return { clicked: true, method: 'aria' };
-    }
-  }
-
-  const options = [...document.querySelectorAll('button.LanguageSelect__option')];
-  const match = options.find((button) => {
-    const label = button.querySelector('.LanguageInfo .UiTypo');
-    const text = label?.textContent?.trim().toLowerCase() || '';
-    return text === normalized;
-  });
-
-  if (match) {
-    match.click();
-    return { clicked: true, method: 'text' };
-  }
-
-  return { clicked: false, method: 'not_found' };
-})()`, normalized)
+	script := strings.Replace(languageSelectionScript, "__LANG__", string(langJSON), 1)
 
 	var result languageSelectionResult
 	if err := chromedp.Run(ctx, chromedp.Evaluate(script, &result)); err != nil {
