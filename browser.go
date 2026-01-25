@@ -183,7 +183,7 @@ func (app *Application) handleLanguageSelection(ctx context.Context, language st
 
 	normalized := strings.ToLower(strings.TrimSpace(language))
 	if normalized == "" {
-		return fmt.Errorf("language selection required: set MIGOKU_LANGUAGE env var to a Migaku language code or name")
+		return fmt.Errorf("language selection required: set TARGET_LANG env var to a Migaku language code or name")
 	}
 
 	app.logger.Info("Language selection required", "language", normalized)

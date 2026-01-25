@@ -47,7 +47,7 @@ Environment variables:
 - `API_SECRET` - API key for authentication (optional, enables auth if set)
 - `CACHE_TTL` - Cache duration (default: 5m)
 - `LOG_LEVEL` - Log level: DEBUG, INFO, WARN, ERROR (default: INFO)
-- `MIGOKU_LANGUAGE` - Optional language selection when Migaku prompts (use language code like `ja` or name like `Japanese`)
+- `TARGET_LANG` - Optional language selection when Migaku prompts (use language code like `ja` or name like `Japanese`)
 
 ## Development
 

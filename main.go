@@ -71,7 +71,7 @@ func realMain(logger *slog.Logger) error {
 	}
 	email := os.Getenv("EMAIL")
 	password := os.Getenv("PASSWORD")
-	language := strings.TrimSpace(os.Getenv("MIGOKU_LANGUAGE"))
+	language := strings.TrimSpace(os.Getenv("TARGET_LANG"))
 	if email == "" || password == "" {
 		logger.Error("Missing required credentials")
 		logger.Info("Please set EMAIL and PASSWORD environment variables")
