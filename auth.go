@@ -47,7 +47,7 @@ type loginRequest struct {
 
 func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		app.writeJSONError(w, r, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
@@ -55,7 +55,7 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 	decoder.DisallowUnknownFields()
 	var req loginRequest
 	if err := decoder.Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		app.writeJSONError(w, r, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
 
@@ -63,55 +63,57 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 	password := strings.TrimSpace(req.Password)
 	language := strings.TrimSpace(req.Language)
 	if email == "" || password == "" || language == "" {
-		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		app.writeJSONError(w, r, http.StatusBadRequest, "Missing required fields")
 		return
 	}
 
 	apiKey, err := app.deriveAPIKey(email, password, language)
 	if err != nil {
 		app.logger.Error("API key derivation failed", "error", err)
-		http.Error(w, "Server misconfigured", http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, "Server misconfigured")
 		return
 	}
 	if _, exists := app.accounts[apiKey]; exists {
-		app.respondJSON(w, map[string]string{
+		if err := encode(w, r, http.StatusOK, map[string]string{
 			"api_key": apiKey,
 			"message": "Already, logged in",
-		})
+		}); err != nil {
+			app.logger.Error("Failed to encode JSON response", "error", err)
+		}
 		return
 	}
 
 	browser, err := NewBrowser(app.logger, email, password, language, app.headless)
 	if err != nil {
 		app.logger.Error("Failed to initialize browser", "error", err)
-		http.Error(w, "Failed to initialize browser", http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, "Failed to initialize browser")
 		return
 	}
 
 	app.accounts[apiKey] = browser
-
-	w.WriteHeader(http.StatusOK)
-	app.respondJSON(w, map[string]string{
+	if err := encode(w, r, http.StatusOK, map[string]string{
 		"api_key": apiKey,
 		"message": "Login successful",
-	})
+	}); err != nil {
+		app.logger.Error("Failed to encode JSON response", "error", err)
+	}
 }
 
 func (app *Application) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		app.writeJSONError(w, r, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	apiKey := r.Header.Get("X-Api-Key")
 	if apiKey == "" {
-		http.Error(w, "Missing API key", http.StatusUnauthorized)
+		app.writeJSONError(w, r, http.StatusUnauthorized, "Missing API key")
 		return
 	}
 
 	browser, exists := app.accounts[apiKey]
 	if !exists || browser == nil {
-		http.Error(w, "Not logged in", http.StatusUnauthorized)
+		app.writeJSONError(w, r, http.StatusUnauthorized, "Not logged in")
 		return
 	}
 
@@ -120,24 +122,24 @@ func (app *Application) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	delete(app.accounts, apiKey)
-
-	w.WriteHeader(http.StatusOK)
-	app.respondJSON(w, map[string]string{
+	if err := encode(w, r, http.StatusOK, map[string]string{
 		"message": "Logout successful",
-	})
+	}); err != nil {
+		app.logger.Error("Failed to encode JSON response", "error", err)
+	}
 }
 
 func (app *Application) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		apiKey := r.Header.Get("X-Api-Key")
 		if apiKey == "" {
-			http.Error(w, "Missing API key", http.StatusUnauthorized)
+			app.writeJSONError(w, r, http.StatusUnauthorized, "Missing API key")
 			return
 		}
 
 		browser, exists := app.accounts[apiKey]
 		if !exists || browser == nil {
-			http.Error(w, "Invalid or expired API key", http.StatusUnauthorized)
+			app.writeJSONError(w, r, http.StatusUnauthorized, "Invalid or expired API key")
 			return
 		}
 
