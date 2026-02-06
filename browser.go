@@ -20,8 +20,13 @@ type languageSelectionResult struct {
 	Method  string `json:"method,omitempty"`
 }
 
-//go:embed snippets/language_select.js
-var languageSelectionScript string
+var (
+	//go:embed snippets/language_select.js
+	languageSelectionScript string
+
+	//go:embed snippets/login_error_check.js
+	loginErrorCheckScript string
+)
 
 type browserCtx context.Context
 
@@ -183,12 +188,7 @@ func NewBrowser(
 								}
 
 								var loginFailed bool
-								evalErr := chromedp.Evaluate(`(() => {
-const email = document.querySelector('input[type="email"][name="email"], input#email');
-const password = document.querySelector('input[type="password"][name="password"], input#password');
-const hasError = (el) => !!el && (el.classList.contains('-error') || el.classList.contains('error'));
-return hasError(email) || hasError(password);
-})()`, &loginFailed).Do(ctx)
+								evalErr := chromedp.Evaluate(loginErrorCheckScript, &loginFailed).Do(ctx)
 								if evalErr == nil && loginFailed {
 									return errors.New("login failed: invalid credentials")
 								}
