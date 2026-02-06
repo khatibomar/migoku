@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,9 +13,7 @@ import (
 var apiHTML []byte
 
 func (app *Application) respondJSON(w http.ResponseWriter, data any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	err := json.NewEncoder(w).Encode(data)
-	if err != nil {
+	if err := encode(w, nil, http.StatusOK, data); err != nil {
 		app.logger.Error("Failed to encode JSON response", "error", err)
 	}
 }
@@ -25,7 +24,7 @@ func (app *Application) requireBrowser(w http.ResponseWriter, r *http.Request) (
 		return browser, true
 	}
 
-	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	app.writeJSONError(w, r, http.StatusUnauthorized, "Unauthorized")
 	return nil, false
 }
 
@@ -48,16 +47,11 @@ func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
 	words, err := app.service.GetWords(r.Context(), browser, lang, status)
 	if err != nil {
 		if err.Error() == "invalid status: must be one of: known, learning, unknown, ignored" {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(http.StatusBadRequest)
-			app.respondJSON(w, map[string]string{
-				"error":   "invalid status",
-				"message": "Status must be one of: known, learning, unknown, ignored",
-			})
+			app.writeJSONError(w, r, http.StatusBadRequest, "Status must be one of: known, learning, unknown, ignored")
 			return
 		}
 		app.logger.Error("Failed to get words", "error", err, "status", status)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -74,12 +68,7 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		app.respondJSON(w, map[string]string{
-			"error":   "invalid json",
-			"message": "Request body must be valid JSON",
-		})
+		app.writeJSONError(w, r, http.StatusBadRequest, "Request body must be valid JSON")
 		return
 	}
 
@@ -88,33 +77,18 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 	req.Secondary = strings.TrimSpace(req.Secondary)
 
 	if req.Status == "" {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		app.respondJSON(w, map[string]string{
-			"error":   "missing parameters",
-			"message": "status is required",
-		})
+		app.writeJSONError(w, r, http.StatusBadRequest, "Status is required")
 		return
 	}
 
 	if _, ok := actionLabelFromStatus(req.Status); !ok {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		app.respondJSON(w, map[string]string{
-			"error":   "invalid status",
-			"message": "Status must be one of: known, learning, tracked, ignored",
-		})
+		app.writeJSONError(w, r, http.StatusBadRequest, "Status must be one of: known, learning, tracked, ignored")
 		return
 	}
 
 	if len(req.Items) == 0 {
 		if req.WordText == "" {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(http.StatusBadRequest)
-			app.respondJSON(w, map[string]string{
-				"error":   "missing parameters",
-				"message": "wordText is required",
-			})
+			app.writeJSONError(w, r, http.StatusBadRequest, "WordText is required")
 			return
 		}
 	}
@@ -125,12 +99,7 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 			wordText := strings.TrimSpace(item.WordText)
 			secondary := strings.TrimSpace(item.Secondary)
 			if wordText == "" {
-				w.Header().Set("Content-Type", "application/json; charset=utf-8")
-				w.WriteHeader(http.StatusBadRequest)
-				app.respondJSON(w, map[string]string{
-					"error":   "missing parameters",
-					"message": "wordText is required for each item",
-				})
+				app.writeJSONError(w, r, http.StatusBadRequest, "WordText is required for each item")
 				return
 			}
 			items = append(items, WordStatusItem{
@@ -142,7 +111,7 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 		result, err := app.service.SetWordStatusBatch(r.Context(), browser, items, req.Status)
 		if err != nil {
 			app.logger.Error("Failed to update word status batch", "error", err, "status", req.Status, "count", len(items))
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
@@ -163,7 +132,7 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 			"secondary",
 			req.Secondary,
 		)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 
@@ -179,7 +148,7 @@ func (app *Application) handleDecks(w http.ResponseWriter, r *http.Request) {
 	decks, err := app.service.GetDecks(r.Context(), browser)
 	if err != nil {
 		app.logger.Error("Failed to get decks", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -198,7 +167,7 @@ func (app *Application) handleStatusCounts(w http.ResponseWriter, r *http.Reques
 	counts, err := app.service.GetStatusCounts(r.Context(), browser, lang, deckID)
 	if err != nil {
 		app.logger.Error("Failed to get status counts", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -215,7 +184,7 @@ func (app *Application) handleTables(w http.ResponseWriter, r *http.Request) {
 	tables, err := app.service.GetTables(r.Context(), browser)
 	if err != nil {
 		app.logger.Error("Failed to get tables", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -231,7 +200,7 @@ func (app *Application) handleDatabaseSchema(w http.ResponseWriter, r *http.Requ
 	schema, err := app.service.GetDatabaseSchema(r.Context(), browser)
 	if err != nil {
 		app.logger.Error("Failed to get database schema", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -253,11 +222,7 @@ func (app *Application) handleDifficultWords(w http.ResponseWriter, r *http.Requ
 	}
 
 	if lang == "" {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
-			app.logger.Error("Failed to write error response", "error", err)
-		}
+		app.writeJSONError(w, r, http.StatusBadRequest, "lang is required")
 		return
 	}
 
@@ -266,7 +231,7 @@ func (app *Application) handleDifficultWords(w http.ResponseWriter, r *http.Requ
 	words, err := app.service.GetDifficultWords(r.Context(), browser, lang, limit, deckID)
 	if err != nil {
 		app.logger.Error("Failed to get difficult words", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	app.respondJSON(w, words)
@@ -280,11 +245,7 @@ func (app *Application) handleWordStats(w http.ResponseWriter, r *http.Request) 
 
 	lang := r.URL.Query().Get("lang")
 	if lang == "" {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
-			app.logger.Error("Failed to write error response", "error", err)
-		}
+		app.writeJSONError(w, r, http.StatusBadRequest, "lang is required")
 		return
 	}
 
@@ -293,7 +254,7 @@ func (app *Application) handleWordStats(w http.ResponseWriter, r *http.Request) 
 	stats, err := app.service.GetWordStats(r.Context(), browser, lang, deckID)
 	if err != nil {
 		app.logger.Error("Failed to get word stats", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	app.respondJSON(w, stats)
@@ -307,11 +268,7 @@ func (app *Application) handleDueStats(w http.ResponseWriter, r *http.Request) {
 
 	lang := r.URL.Query().Get("lang")
 	if lang == "" {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
-			app.logger.Error("Failed to write error response", "error", err)
-		}
+		app.writeJSONError(w, r, http.StatusBadRequest, "lang is required")
 		return
 	}
 
@@ -320,8 +277,8 @@ func (app *Application) handleDueStats(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := app.service.GetDueStats(r.Context(), browser, lang, deckID, periodID)
 	if err != nil {
-		app.logger.Error("Failed to get due stats", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.logger.Error("Failed to get due stats", slog.String("error", err.Error()))
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	app.respondJSON(w, stats)
@@ -335,11 +292,7 @@ func (app *Application) handleIntervalStats(w http.ResponseWriter, r *http.Reque
 
 	lang := r.URL.Query().Get("lang")
 	if lang == "" {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
-			app.logger.Error("Failed to write error response", "error", err)
-		}
+		app.writeJSONError(w, r, http.StatusBadRequest, "lang is required")
 		return
 	}
 
@@ -348,8 +301,8 @@ func (app *Application) handleIntervalStats(w http.ResponseWriter, r *http.Reque
 
 	stats, err := app.service.GetIntervalStats(r.Context(), browser, lang, deckID, percentileID)
 	if err != nil {
-		app.logger.Error("Failed to get interval stats", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.logger.Error("Failed to get interval stats", slog.String("error", err.Error()))
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	app.respondJSON(w, stats)
@@ -363,11 +316,7 @@ func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request)
 
 	lang := r.URL.Query().Get("lang")
 	if lang == "" {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`{"error": "missing parameters", "message": "lang is required"}`)); err != nil {
-			app.logger.Error("Failed to write error response", "error", err)
-		}
+		app.writeJSONError(w, r, http.StatusBadRequest, "lang is required")
 		return
 	}
 
@@ -376,8 +325,8 @@ func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request)
 
 	stats, err := app.service.GetStudyStats(r.Context(), browser, lang, deckID, periodID)
 	if err != nil {
-		app.logger.Error("Failed to get study stats", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		app.logger.Error("Failed to get study stats", slog.String("error", err.Error()))
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	app.respondJSON(w, stats)
@@ -393,19 +342,14 @@ func (app *Application) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		_, err := w.Write([]byte(`{"error": "endpoint not found", "message": "The requested endpoint does not exist"}`))
-		if err != nil {
-			app.logger.Error("Failed to write 404 response", "error", err)
-		}
+		app.writeJSONError(w, r, http.StatusNotFound, "The requested endpoint does not exist")
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, err := w.Write(apiHTML)
 	if err != nil {
-		app.logger.Error("Failed to write root response", "error", err)
+		app.logger.Error("Failed to write root response", slog.String("error", err.Error()))
 	}
 }
 
