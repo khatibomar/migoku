@@ -71,12 +71,15 @@
         <div class="desc">Change a word status in Migaku</div>
         JSON Body:<br>
         • <code>status</code> (required): <code>known</code>, <code>learning</code>, <code>tracked</code>, <code>ignored</code><br>
-        • <code>wordText</code> (required): Dictionary form<br>
+        • <code>wordText</code> (optional): Dictionary form<br>
         • <code>secondary</code> (optional): Secondary form / reading for stronger match<br>
-        • <code>items</code> (optional): Batch updates; array of <code>{wordText, secondary}</code> objects. Each item requires <code>wordText</code>.<br>
+        • <code>items</code> (optional): Batch updates; array of <code>{"wordText","secondary"}</code> objects. Each item requires <code>wordText</code>.<br>
+        • At least one of <code>wordText</code> or <code>secondary</code> is required when <code>items</code> is not provided. If both are provided, both must match.<br>
+        • If <code>items</code> is provided, it takes precedence and updates all items in the batch.<br>
         <strong>Examples:</strong><br>
         <code>{"status":"known","wordText":"僕","secondary":"ぼく"}</code><br>
-        <code>{"status":"known","items":[{"wordText":"本","secondary":"ほん"},{"wordText":"僕"}]}</code><br>
+        <strong>Batch Example:</strong><br>
+        <code>{"status":"learning","items":[{"wordText":"本","secondary":"ほん"},{"wordText":"水","secondary":"みず"}]}</code><br>
         <pre class="response">{"ok":true}</pre>
     </div>
 
@@ -87,7 +90,17 @@
         • <code>lang</code> (required): Language code<br>
         • <code>limit</code> (optional, default 50): Max results<br>
         • <code>deckId</code> (optional): Filter by deck<br>
-        <pre class="response">[{"dictForm":"難","secondary":"かた","partOfSpeech":"suffix","knownStatus":"LEARNING","total_reviews":15,"failed_reviews":8,"fail_rate":53.33}]</pre>
+                <pre class="response">[
+    {
+        "dictForm": "難",
+        "secondary": "かた",
+        "partOfSpeech": "suffix",
+        "knownStatus": "LEARNING",
+        "total_reviews": 15,
+        "failed_reviews": 8,
+        "fail_rate": 53.33
+    }
+]</pre>
     </div>
 
     <h2>Decks</h2>
@@ -178,7 +191,7 @@
     <div class="endpoint">
         <span class="method get">GET</span> <code>/dev/status</code><br>
         <div class="desc">Get server status and configuration</div>
-        <pre class="response">{"status":"running","authenticated":true,"cache_ttl":"5m0s","headless":true}</pre>
+           <pre class="response">{"status":"running","cache_ttl":"5m0s","headless":true}</pre>
     </div>
 
     <div class="endpoint">
