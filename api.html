@@ -71,11 +71,12 @@
         <div class="desc">Change a word status in Migaku</div>
         JSON Body:<br>
         • <code>status</code> (required): <code>known</code>, <code>learning</code>, <code>tracked</code>, <code>ignored</code><br>
-        • <code>wordText</code> (optional): Dictionary form<br>
-        • <code>secondary</code> (optional): Secondary form / reading<br>
-        • At least one of <code>wordText</code> or <code>secondary</code> is required. If both are provided, both must match.<br>
-        <strong>Example:</strong><br>
-        <code>{"status":"known","wordText":"book","secondary":"reading"}</code><br>
+        • <code>wordText</code> (required): Dictionary form<br>
+        • <code>secondary</code> (optional): Secondary form / reading for stronger match<br>
+        • <code>items</code> (optional): Batch updates; array of <code>{wordText, secondary}</code> objects. Each item requires <code>wordText</code>.<br>
+        <strong>Examples:</strong><br>
+        <code>{"status":"known","wordText":"僕","secondary":"ぼく"}</code><br>
+        <code>{"status":"known","items":[{"wordText":"本","secondary":"ほん"},{"wordText":"僕"}]}</code><br>
         <pre class="response">{"ok":true}</pre>
     </div>
 
