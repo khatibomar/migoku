@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/chromedp/cdproto/runtime"
@@ -48,19 +50,27 @@ type wordStatusPayload struct {
 	ActionLabel string           `json:"actionLabel"`
 }
 
-func normalizeWordStatus(status string) (string, string, bool) {
+func actionLabelFromStatus(status string) (string, bool) {
 	normalized := strings.ToLower(strings.TrimSpace(status))
 	actionLabel, ok := wordStatusActionLabels[normalized]
-	return normalized, actionLabel, ok
+	return actionLabel, ok
 }
 
-func (s *MigakuService) SetWordStatus(wordText, secondary, status string) (*WordStatusResult, error) {
-	app := s.repo.app
+func (s *MigakuService) SetWordStatus(
+	ctx context.Context,
+	browser *Browser,
+	wordText, secondary, status string,
+) (*WordStatusResult, error) {
 	wordText = strings.TrimSpace(wordText)
 	secondary = strings.TrimSpace(secondary)
-	app.logger.Info("Updating word status", "status", status, "wordText", wordText, "secondary", secondary)
+	browser.logger.Info(
+		"Updating word status",
+		slog.String("status", status),
+		slog.String("wordText", wordText),
+		slog.String("secondary", secondary),
+	)
 
-	return s.setWordStatusItems([]WordStatusItem{
+	return s.setWordStatusItems(ctx, browser, []WordStatusItem{
 		{
 			WordText:  wordText,
 			Secondary: secondary,
@@ -68,18 +78,31 @@ func (s *MigakuService) SetWordStatus(wordText, secondary, status string) (*Word
 	}, status)
 }
 
-func (s *MigakuService) SetWordStatusBatch(items []WordStatusItem, status string) (*WordStatusResult, error) {
-	s.repo.app.logger.Info("Updating word status batch", "status", status, "count", len(items))
-	return s.setWordStatusItems(items, status)
+func (s *MigakuService) SetWordStatusBatch(
+	ctx context.Context,
+	browser *Browser,
+	items []WordStatusItem,
+	status string,
+) (*WordStatusResult, error) {
+	browser.logger.Info(
+		"Updating word status batch",
+		slog.String("status", status),
+		slog.Int("count", len(items)),
+	)
+	return s.setWordStatusItems(ctx, browser, items, status)
 }
 
-func (s *MigakuService) setWordStatusItems(items []WordStatusItem, status string) (*WordStatusResult, error) {
-	app := s.repo.app
-	if !app.isAuthenticated.Load() {
+func (s *MigakuService) setWordStatusItems(
+	ctx context.Context,
+	browser *Browser,
+	items []WordStatusItem,
+	status string,
+) (*WordStatusResult, error) {
+	if browser == nil {
 		return nil, errors.New("browser not authenticated")
 	}
 
-	_, actionLabel, ok := normalizeWordStatus(status)
+	actionLabel, ok := actionLabelFromStatus(status)
 	if !ok {
 		return nil, errors.New("invalid status: must be one of: known, learning, tracked, ignored")
 	}
@@ -119,7 +142,9 @@ func (s *MigakuService) setWordStatusItems(items []WordStatusItem, status string
 
 	var result WordStatusResult
 	eval := chromedp.Evaluate(script, &result, awaitPromise)
-	if err := chromedp.Run(app.browserCtx,
+	runCtx, cancel := browserRunContext(ctx, browser)
+	defer cancel()
+	if err := chromedp.Run(runCtx,
 		chromedp.Navigate(wordBrowserURL),
 		chromedp.WaitReady("body", chromedp.ByQuery),
 		eval,

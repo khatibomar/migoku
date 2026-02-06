@@ -10,15 +10,11 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"syscall"
 	"time"
 )
 
 type Application struct {
-	isAuthenticated atomic.Bool
-	browserCtx      context.Context
-
 	logger  *slog.Logger
 	cache   *Cache
 	service *MigakuService
@@ -28,6 +24,8 @@ type Application struct {
 	loginWaitTime time.Duration
 	cors          []string
 	secretKey     string
+
+	accounts map[string]*Browser
 }
 
 var _, longVersion, _ = FromBuildInfo()
@@ -69,14 +67,6 @@ func realMain(logger *slog.Logger) error {
 			cors[i] = strings.TrimSpace(origin)
 		}
 	}
-	email := os.Getenv("EMAIL")
-	password := os.Getenv("PASSWORD")
-	language := strings.TrimSpace(os.Getenv("TARGET_LANG"))
-	if email == "" || password == "" {
-		logger.Error("Missing required credentials")
-		logger.Info("Please set EMAIL and PASSWORD environment variables")
-		return errors.New("missing required credentials")
-	}
 	cacheTTL := os.Getenv("CACHE_TTL")
 	var cacheTTLDuration time.Duration
 	if cacheTTL == "" {
@@ -92,31 +82,24 @@ func realMain(logger *slog.Logger) error {
 	cache := NewCache(cacheTTLDuration)
 
 	secretKey := os.Getenv("API_SECRET")
-	if secretKey != "" {
-		logger.Info("API authentication enabled")
+	if secretKey == "" {
+		return errors.New("API_SECRET environment variable is required")
 	}
 
 	logger.Info("Initializing browser and logging in...")
 
 	app := &Application{
-		secretKey:     secretKey,
 		headless:      headless,
 		port:          portInt,
 		loginWaitTime: 30 * time.Second,
 		cors:          cors,
 		cache:         cache,
 		logger:        logger,
+		secretKey:     secretKey,
+		accounts:      make(map[string]*Browser),
 	}
 
-	browserCtx, cleanUp, err := app.initializeBrowser(email, password, language)
-	defer cleanUp()
-	if err != nil {
-		logger.Error("Failed to initialize browser", "error", err)
-		return fmt.Errorf("failed to initialize browser: %w", err)
-	}
-	app.browserCtx = browserCtx
-
-	repo := NewRepository(app)
+	repo := NewRepository()
 	app.service = NewMigakuService(repo, cache)
 
 	logger.Info("Login complete, browser ready for queries")
@@ -131,6 +114,8 @@ func realMain(logger *slog.Logger) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", chainMiddlewares(app.handleRoot, app.corsMiddleware))
+	mux.HandleFunc("/auth/login", chainMiddlewares(app.handleLogin, app.corsMiddleware))
+	mux.HandleFunc("/auth/logout", chainMiddlewares(app.handleLogout, app.corsMiddleware, app.authMiddleware))
 
 	v1 := http.NewServeMux()
 	v1.HandleFunc("GET /words", chainMiddlewares(app.handleWords, app.corsMiddleware, app.authMiddleware))
@@ -170,7 +155,7 @@ func realMain(logger *slog.Logger) error {
 
 	go func() {
 		logger.Info("Server listening", "addr", server.Addr)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("Server failed", "error", err)
 		}
 	}()
@@ -180,6 +165,12 @@ func realMain(logger *slog.Logger) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	for _, browser := range app.accounts {
+		if browser != nil {
+			browser.Close()
+		}
+	}
 
 	if err := server.Shutdown(ctx); err != nil {
 		logger.Error("Server forced to shutdown", "error", err)

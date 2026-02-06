@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -16,6 +17,17 @@ type Word struct {
 	Secondary   string `json:"secondary"`
 	KnownStatus string `json:"knownStatus,omitempty"`
 }
+
+const (
+	statusKnown    = "known"
+	statusLearning = "learning"
+	statusUnknown  = "unknown"
+	statusIgnored  = "ignored"
+
+	cacheAllKey = "all"
+
+	periodAllTime = "All time"
+)
 
 // WordFromRow creates a Word from a repository wordRow
 func WordFromRow(row wordRow) Word {
@@ -102,6 +114,13 @@ type MigakuService struct {
 	cache *Cache
 }
 
+func (s *MigakuService) scopedCacheKey(browser *Browser, key string) string {
+	if browser == nil || browser.key == "" {
+		return key
+	}
+	return "browser:" + browser.key + ":" + key
+}
+
 // NewMigakuService creates a new service instance
 func NewMigakuService(repo *Repository, cache *Cache) *MigakuService {
 	return &MigakuService{
@@ -111,8 +130,8 @@ func NewMigakuService(repo *Repository, cache *Cache) *MigakuService {
 }
 
 // GetWords retrieves words with optional status and language filters
-func (s *MigakuService) GetWords(lang, status string) ([]Word, error) {
-	if status != "" && status != "known" && status != "learning" && status != "unknown" && status != "ignored" {
+func (s *MigakuService) GetWords(ctx context.Context, browser *Browser, lang, status string) ([]Word, error) {
+	if status != "" && status != statusKnown && status != statusLearning && status != statusUnknown && status != statusIgnored {
 		return nil, errors.New("invalid status: must be one of: known, learning, unknown, ignored")
 	}
 
@@ -123,10 +142,11 @@ func (s *MigakuService) GetWords(lang, status string) ([]Word, error) {
 		cacheKey += status + ":"
 	}
 	if lang == "" {
-		cacheKey += "all"
+		cacheKey += cacheAllKey
 	} else {
 		cacheKey += lang
 	}
+	cacheKey = s.scopedCacheKey(browser, cacheKey)
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if words, ok := cached.([]Word); ok {
@@ -137,13 +157,13 @@ func (s *MigakuService) GetWords(lang, status string) ([]Word, error) {
 	var dbStatus string
 	if status != "" {
 		switch status {
-		case "known":
+		case statusKnown:
 			dbStatus = "KNOWN"
-		case "learning":
+		case statusLearning:
 			dbStatus = "LEARNING"
-		case "unknown":
+		case statusUnknown:
 			dbStatus = "UNKNOWN"
-		case "ignored":
+		case statusIgnored:
 			dbStatus = "IGNORED"
 		}
 	}
@@ -153,7 +173,7 @@ func (s *MigakuService) GetWords(lang, status string) ([]Word, error) {
 		limit = 10000
 	}
 
-	rows, err := s.repo.GetWords(lang, dbStatus, limit)
+	rows, err := s.repo.GetWords(ctx, browser, lang, dbStatus, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -165,8 +185,8 @@ func (s *MigakuService) GetWords(lang, status string) ([]Word, error) {
 }
 
 // GetDecks retrieves all decks with caching
-func (s *MigakuService) GetDecks() ([]Deck, error) {
-	cacheKey := "decks"
+func (s *MigakuService) GetDecks(ctx context.Context, browser *Browser) ([]Deck, error) {
+	cacheKey := s.scopedCacheKey(browser, "decks")
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if decks, ok := cached.([]Deck); ok {
@@ -174,7 +194,7 @@ func (s *MigakuService) GetDecks() ([]Deck, error) {
 		}
 	}
 
-	rows, err := s.repo.GetDecks()
+	rows, err := s.repo.GetDecks(ctx, browser)
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +206,8 @@ func (s *MigakuService) GetDecks() ([]Deck, error) {
 }
 
 // GetStatusCounts retrieves status counts with caching
-func (s *MigakuService) GetStatusCounts(lang, deckID string) (*StatusCounts, error) {
-	cacheKey := s.buildStatusCountsCacheKey(lang, deckID)
+func (s *MigakuService) GetStatusCounts(ctx context.Context, browser *Browser, lang, deckID string) (*StatusCounts, error) {
+	cacheKey := s.scopedCacheKey(browser, s.buildStatusCountsCacheKey(lang, deckID))
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if counts, ok := cached.(*StatusCounts); ok {
@@ -195,7 +215,7 @@ func (s *MigakuService) GetStatusCounts(lang, deckID string) (*StatusCounts, err
 		}
 	}
 
-	rows, err := s.repo.GetStatusCounts(lang, deckID)
+	rows, err := s.repo.GetStatusCounts(ctx, browser, lang, deckID)
 	if err != nil {
 		return nil, err
 	}
@@ -207,8 +227,8 @@ func (s *MigakuService) GetStatusCounts(lang, deckID string) (*StatusCounts, err
 }
 
 // GetTables retrieves all database tables with caching
-func (s *MigakuService) GetTables() ([]Table, error) {
-	cacheKey := "tables"
+func (s *MigakuService) GetTables(ctx context.Context, browser *Browser) ([]Table, error) {
+	cacheKey := s.scopedCacheKey(browser, "tables")
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if tables, ok := cached.([]Table); ok {
@@ -216,7 +236,7 @@ func (s *MigakuService) GetTables() ([]Table, error) {
 		}
 	}
 
-	rows, err := s.repo.GetTables()
+	rows, err := s.repo.GetTables(ctx, browser)
 	if err != nil {
 		return nil, err
 	}
@@ -232,13 +252,13 @@ func (s *MigakuService) buildStatusCountsCacheKey(lang, deckID string) string {
 	cacheKey := "status:counts:"
 
 	if deckID == "" {
-		cacheKey += "all:"
+		cacheKey += cacheAllKey + ":"
 	} else {
 		cacheKey += fmt.Sprintf("deck:%s:", deckID)
 	}
 
 	if lang == "" {
-		cacheKey += "all"
+		cacheKey += cacheAllKey
 	} else {
 		cacheKey += lang
 	}
@@ -258,11 +278,17 @@ type DifficultWord struct {
 }
 
 // GetDifficultWords retrieves words with highest fail rates
-func (s *MigakuService) GetDifficultWords(lang string, limit int, deckID string) ([]DifficultWord, error) {
+func (s *MigakuService) GetDifficultWords(
+	ctx context.Context,
+	browser *Browser,
+	lang string,
+	limit int,
+	deckID string,
+) ([]DifficultWord, error) {
 	if limit == 0 {
 		limit = 50
 	}
-	cacheKey := fmt.Sprintf("difficult:words:%s:%d:%s", lang, limit, deckID)
+	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("difficult:words:%s:%d:%s", lang, limit, deckID))
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if words, ok := cached.([]DifficultWord); ok {
@@ -270,7 +296,7 @@ func (s *MigakuService) GetDifficultWords(lang string, limit int, deckID string)
 		}
 	}
 
-	rows, err := s.repo.GetDifficultWords(lang, limit, deckID)
+	rows, err := s.repo.GetDifficultWords(ctx, browser, lang, limit, deckID)
 	if err != nil {
 		return nil, err
 	}
@@ -295,8 +321,8 @@ type FieldMetadata struct {
 type DatabaseSchema map[string]map[string]FieldMetadata
 
 // GetDatabaseSchema retrieves the database schema and transforms it into a nested structure
-func (s *MigakuService) GetDatabaseSchema() (DatabaseSchema, error) {
-	cacheKey := "database:schema"
+func (s *MigakuService) GetDatabaseSchema(ctx context.Context, browser *Browser) (DatabaseSchema, error) {
+	cacheKey := s.scopedCacheKey(browser, "database:schema")
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if schema, ok := cached.(DatabaseSchema); ok {
@@ -304,7 +330,7 @@ func (s *MigakuService) GetDatabaseSchema() (DatabaseSchema, error) {
 		}
 	}
 
-	rows, err := s.repo.GetDatabaseSchema()
+	rows, err := s.repo.GetDatabaseSchema(ctx, browser)
 	if err != nil {
 		return nil, err
 	}
@@ -367,12 +393,12 @@ type StudyStats struct {
 
 const msPerDay = int64(24 * 60 * 60 * 1000)
 
-func (s *MigakuService) GetWordStats(lang, deckID string) (*WordStats, error) {
+func (s *MigakuService) GetWordStats(ctx context.Context, browser *Browser, lang, deckID string) (*WordStats, error) {
 	if lang == "" {
 		return nil, errors.New("lang parameter is required")
 	}
 
-	useDeckFilter := deckID != "" && deckID != "all"
+	useDeckFilter := deckID != "" && deckID != cacheAllKey
 
 	query := `
   SELECT
@@ -383,8 +409,7 @@ func (s *MigakuService) GetWordStats(lang, deckID string) (*WordStats, error) {
   FROM WordList
   WHERE language = ? AND del = 0`
 
-	var params []any
-	params = append(params, lang)
+	params := []any{lang}
 
 	if useDeckFilter {
 		query = `
@@ -404,7 +429,7 @@ func (s *MigakuService) GetWordStats(lang, deckID string) (*WordStats, error) {
 		params = []any{lang, deckID}
 	}
 
-	cacheKey := fmt.Sprintf("stats:words:%s:%s", lang, deckID)
+	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("stats:words:%s:%s", lang, deckID))
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if ws, ok := cached.(*WordStats); ok {
 			return ws, nil
@@ -418,7 +443,7 @@ func (s *MigakuService) GetWordStats(lang, deckID string) (*WordStats, error) {
 		IgnoredCount  int `json:"ignored_count"`
 	}
 
-	rows, err := runQuery[wordStatsRow](s.repo.app, query, params...)
+	rows, err := runQuery[wordStatsRow](ctx, browser, query, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -436,16 +461,16 @@ func (s *MigakuService) GetWordStats(lang, deckID string) (*WordStats, error) {
 	return stats, nil
 }
 
-func (s *MigakuService) GetDueStats(lang, deckID, periodId string) (*DueStats, error) {
+func (s *MigakuService) GetDueStats(ctx context.Context, browser *Browser, lang, deckID, periodID string) (*DueStats, error) {
 	if lang == "" {
 		return nil, errors.New("lang parameter is required")
 	}
 
-	if periodId == "" {
-		periodId = "1 Month"
+	if periodID == "" {
+		periodID = "1 Month"
 	}
 
-	cacheKey := fmt.Sprintf("stats:due:%s:%s:%s", lang, deckID, periodId)
+	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("stats:due:%s:%s:%s", lang, deckID, periodID))
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if ds, ok := cached.(*DueStats); ok {
 			return ds, nil
@@ -459,7 +484,7 @@ func (s *MigakuService) GetDueStats(lang, deckID, periodId string) (*DueStats, e
 		Entry string `json:"entry"`
 	}
 
-	dateRows, err := runQuery[currentDateRow](s.repo.app, `
+	dateRows, err := runQuery[currentDateRow](ctx, browser, `
 SELECT entry 
 FROM keyValue
 WHERE key = 'study.activeDay.currentDate';`)
@@ -476,8 +501,8 @@ WHERE key = 'study.activeDay.currentDate';`)
 	var forecastDays int
 	var endDayNumber int
 
-	switch periodId {
-	case "All time":
+	switch periodID {
+	case periodAllTime:
 		forecastDays = 3650
 
 		type maxDueRow struct {
@@ -490,13 +515,13 @@ FROM card c
 JOIN card_type ct ON c.cardTypeId = ct.id
 WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 		maxDueParams := []any{lang, currentDayNumber}
-		useDeckFilter := deckID != "" && deckID != "all"
+		useDeckFilter := deckID != "" && deckID != cacheAllKey
 		if useDeckFilter {
-			maxDueQuery += " AND c.deckId = ?"
+			maxDueQuery += deckIDClause
 			maxDueParams = append(maxDueParams, deckID)
 		}
 
-		maxDueRows, err := runQuery[maxDueRow](s.repo.app, maxDueQuery, maxDueParams...)
+		maxDueRows, err := runQuery[maxDueRow](ctx, browser, maxDueQuery, maxDueParams...)
 		if err == nil && len(maxDueRows) > 0 && maxDueRows[0].MaxDue != nil {
 			endDayNumber = *maxDueRows[0].MaxDue
 		} else {
@@ -508,7 +533,7 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 		forecastDays = max(int(math.Round(diff)), 1)
 		endDayNumber = currentDayNumber + (forecastDays - 1)
 	default:
-		monthsStr := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(periodId, " Months"), "Month"), "Months")
+		monthsStr := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(periodID, " Months"), "Month"), "Months")
 		months, err := strconv.Atoi(strings.TrimSpace(monthsStr))
 		if err != nil || months <= 0 {
 			months = 1
@@ -540,14 +565,14 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
   WHERE ct.lang = ? AND c.due BETWEEN ? AND ? AND c.del = 0`
 
 	params := []any{lang, currentDayNumber, endDayNumber}
-	useDeckFilter := deckID != "" && deckID != "all"
+	useDeckFilter := deckID != "" && deckID != cacheAllKey
 	if useDeckFilter {
-		query += " AND c.deckId = ?"
+		query += deckIDClause
 		params = append(params, deckID)
 	}
 	query += " GROUP BY due, interval_range ORDER BY due;"
 
-	rows, err := runQuery[dueRow](s.repo.app, query, params...)
+	rows, err := runQuery[dueRow](ctx, browser, query, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -576,7 +601,7 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 		counts[dayIndex] += row.Count
 	}
 
-	if periodId == "All time" {
+	if periodID == periodAllTime {
 		lastNonZeroIndex := len(counts) - 1
 		for lastNonZeroIndex >= 0 && counts[lastNonZeroIndex] == 0 {
 			lastNonZeroIndex--
@@ -605,16 +630,20 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 	return stats, nil
 }
 
-func (s *MigakuService) GetIntervalStats(lang, deckID, percentileId string) (*IntervalStats, error) {
+func (s *MigakuService) GetIntervalStats(
+	ctx context.Context,
+	browser *Browser,
+	lang, deckID, percentileID string,
+) (*IntervalStats, error) {
 	if lang == "" {
 		return nil, errors.New("lang parameter is required")
 	}
 
-	if percentileId == "" {
-		percentileId = "75th"
+	if percentileID == "" {
+		percentileID = "75th"
 	}
 
-	cacheKey := fmt.Sprintf("stats:interval:%s:%s:%s", lang, deckID, percentileId)
+	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("stats:interval:%s:%s:%s", lang, deckID, percentileID))
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if is, ok := cached.(*IntervalStats); ok {
 			return is, nil
@@ -635,14 +664,14 @@ func (s *MigakuService) GetIntervalStats(lang, deckID, percentileId string) (*In
   WHERE ct.lang = ? AND c.del = 0 AND c.interval > 0`
 
 	params := []any{lang}
-	useDeckFilter := deckID != "" && deckID != "all"
+	useDeckFilter := deckID != "" && deckID != cacheAllKey
 	if useDeckFilter {
-		query += " AND c.deckId = ?"
+		query += deckIDClause
 		params = append(params, deckID)
 	}
 	query += " GROUP BY interval_group ORDER BY interval_group;"
 
-	rows, err := runQuery[intervalRow](s.repo.app, query, params...)
+	rows, err := runQuery[intervalRow](ctx, browser, query, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -665,7 +694,7 @@ func (s *MigakuService) GetIntervalStats(lang, deckID, percentileId string) (*In
 		totalCards += count
 	}
 
-	percentileNum, err := strconv.Atoi(strings.TrimSuffix(percentileId, "th"))
+	percentileNum, err := strconv.Atoi(strings.TrimSuffix(percentileID, "th"))
 	if err != nil || percentileNum <= 0 {
 		percentileNum = 75
 	}
@@ -712,16 +741,16 @@ func (s *MigakuService) GetIntervalStats(lang, deckID, percentileId string) (*In
 	return stats, nil
 }
 
-func (s *MigakuService) GetStudyStats(lang, deckID, periodId string) (*StudyStats, error) {
+func (s *MigakuService) GetStudyStats(ctx context.Context, browser *Browser, lang, deckID, periodID string) (*StudyStats, error) {
 	if lang == "" {
 		return nil, errors.New("lang parameter is required")
 	}
 
-	if periodId == "" {
-		periodId = "1 Month"
+	if periodID == "" {
+		periodID = "1 Month"
 	}
 
-	cacheKey := fmt.Sprintf("stats:study:%s:%s:%s", lang, deckID, periodId)
+	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("stats:study:%s:%s:%s", lang, deckID, periodID))
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if ss, ok := cached.(*StudyStats); ok {
 			return ss, nil
@@ -738,7 +767,7 @@ func (s *MigakuService) GetStudyStats(lang, deckID, periodId string) (*StudyStat
 	var startDayNumber int
 	var earliestReviewDayForAllTime *int
 
-	if periodId == "All time" {
+	if periodID == periodAllTime {
 		query := `
 SELECT MIN(r.day) as minDay
 FROM review r
@@ -746,9 +775,9 @@ JOIN card c ON r.cardId = c.id
 JOIN card_type ct ON c.cardTypeId = ct.id
 WHERE ct.lang = ? AND r.del = 0`
 		params := []any{lang}
-		useDeckFilter := deckID != "" && deckID != "all"
+		useDeckFilter := deckID != "" && deckID != cacheAllKey
 		if useDeckFilter {
-			query += " AND c.deckId = ?"
+			query += deckIDClause
 			params = append(params, deckID)
 		}
 
@@ -756,7 +785,7 @@ WHERE ct.lang = ? AND r.del = 0`
 			MinDay *int `json:"minDay"`
 		}
 
-		rows, err := runQuery[minDayRow](s.repo.app, query, params...)
+		rows, err := runQuery[minDayRow](ctx, browser, query, params...)
 		if err == nil && len(rows) > 0 && rows[0].MinDay != nil {
 			earliestReviewDayForAllTime = rows[0].MinDay
 			periodDays = currentDayNumber - *earliestReviewDayForAllTime + 1
@@ -767,15 +796,15 @@ WHERE ct.lang = ? AND r.del = 0`
 		}
 	} else {
 		var months int
-		if strings.Contains(periodId, "Year") {
-			numStr := strings.TrimSpace(strings.TrimSuffix(strings.ReplaceAll(periodId, "Years", ""), "Year"))
+		if strings.Contains(periodID, "Year") {
+			numStr := strings.TrimSpace(strings.TrimSuffix(strings.ReplaceAll(periodID, "Years", ""), "Year"))
 			n, err := strconv.Atoi(numStr)
 			if err != nil || n <= 0 {
 				n = 1
 			}
 			months = n * 12
 		} else {
-			numStr := strings.TrimSpace(strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(periodId, " Months"), "Month"), "Months"))
+			numStr := strings.TrimSpace(strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(periodID, " Months"), "Month"), "Months"))
 			n, err := strconv.Atoi(numStr)
 			if err != nil || n <= 0 {
 				n = 1
@@ -803,6 +832,7 @@ JOIN card_type ct ON c.cardTypeId = ct.id
 WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0`
 	studyParams := []any{lang, startDayNumber, currentDayNumber}
 
+	// #nosec G101 -- SQL query string, no credentials.
 	passRateQuery := `
 SELECT 
   SUM(CASE WHEN r.type = 2 THEN 1 ELSE 0 END) as successful_reviews,
@@ -884,33 +914,34 @@ JOIN card_type ct ON c.cardTypeId = ct.id
 WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type IN (1, 2)`
 	reviewsTimeParams := []any{lang, startDayNumber, currentDayNumber}
 
-	useDeckFilter := deckID != "" && deckID != "all"
+	useDeckFilter := deckID != "" && deckID != cacheAllKey
 	if useDeckFilter {
-		studyQuery += " AND c.deckId = ?"
+		studyQuery += deckIDClause
 		studyParams = append(studyParams, deckID)
 
-		passRateQuery += " AND c.deckId = ?"
+		// #nosec G101 -- SQL query string, no credentials.
+		passRateQuery += deckIDClause
 		passRateParams = append(passRateParams, deckID)
 
-		newCardsQuery += " AND c.deckId = ?"
+		newCardsQuery += deckIDClause
 		newCardsParams = append(newCardsParams, deckID)
 
-		cardsAddedQuery += " AND c.deckId = ?"
+		cardsAddedQuery += deckIDClause
 		cardsAddedParams = append(cardsAddedParams, deckID)
 
-		cardsLearnedQuery += " AND c.deckId = ?"
+		cardsLearnedQuery += deckIDClause
 		cardsLearnedParams = append(cardsLearnedParams, deckID)
 
-		totalNewCardsQuery += " AND c.deckId = ?"
+		totalNewCardsQuery += deckIDClause
 		totalNewCardsParams = append(totalNewCardsParams, deckID)
 
-		cardsLearnedPerDayQuery += " AND c.deckId = ?"
+		cardsLearnedPerDayQuery += deckIDClause
 		cardsLearnedPerDayParams = append(cardsLearnedPerDayParams, deckID)
 
-		newCardsTimeQuery += " AND c.deckId = ?"
+		newCardsTimeQuery += deckIDClause
 		newCardsTimeParams = append(newCardsTimeParams, deckID)
 
-		reviewsTimeQuery += " AND c.deckId = ?"
+		reviewsTimeQuery += deckIDClause
 		reviewsTimeParams = append(reviewsTimeParams, deckID)
 	}
 
@@ -950,39 +981,44 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type IN (1, 2)`
 		AvgTimeSeconds   float64 `json:"avg_time_seconds"`
 	}
 
-	studyResults, err := runQuery[studyRow](s.repo.app, studyQuery, studyParams...)
+	studyResults, err := runQuery[studyRow](ctx, browser, studyQuery, studyParams...)
 	if err != nil {
 		return nil, err
 	}
-	passRateResults, err := runQuery[passRateRow](s.repo.app, passRateQuery, passRateParams...)
+	passRateResults, err := runQuery[passRateRow](ctx, browser, passRateQuery, passRateParams...)
 	if err != nil {
 		return nil, err
 	}
-	newCardsResults, err := runQuery[newCardsRow](s.repo.app, newCardsQuery, newCardsParams...)
+	newCardsResults, err := runQuery[newCardsRow](ctx, browser, newCardsQuery, newCardsParams...)
 	if err != nil {
 		return nil, err
 	}
-	cardsAddedResults, err := runQuery[cardsAddedRow](s.repo.app, cardsAddedQuery, cardsAddedParams...)
+	cardsAddedResults, err := runQuery[cardsAddedRow](ctx, browser, cardsAddedQuery, cardsAddedParams...)
 	if err != nil {
 		return nil, err
 	}
-	cardsLearnedResults, err := runQuery[cardsLearnedRow](s.repo.app, cardsLearnedQuery, cardsLearnedParams...)
+	cardsLearnedResults, err := runQuery[cardsLearnedRow](ctx, browser, cardsLearnedQuery, cardsLearnedParams...)
 	if err != nil {
 		return nil, err
 	}
-	totalNewCardsResults, err := runQuery[totalNewCardsRow](s.repo.app, totalNewCardsQuery, totalNewCardsParams...)
+	totalNewCardsResults, err := runQuery[totalNewCardsRow](ctx, browser, totalNewCardsQuery, totalNewCardsParams...)
 	if err != nil {
 		return nil, err
 	}
-	cardsLearnedPerDayResults, err := runQuery[cardsLearnedPerDayRow](s.repo.app, cardsLearnedPerDayQuery, cardsLearnedPerDayParams...)
+	cardsLearnedPerDayResults, err := runQuery[cardsLearnedPerDayRow](
+		ctx,
+		browser,
+		cardsLearnedPerDayQuery,
+		cardsLearnedPerDayParams...,
+	)
 	if err != nil {
 		return nil, err
 	}
-	newCardsTimeResults, err := runQuery[timeRow](s.repo.app, newCardsTimeQuery, newCardsTimeParams...)
+	newCardsTimeResults, err := runQuery[timeRow](ctx, browser, newCardsTimeQuery, newCardsTimeParams...)
 	if err != nil {
 		return nil, err
 	}
-	reviewsTimeResults, err := runQuery[timeRow](s.repo.app, reviewsTimeQuery, reviewsTimeParams...)
+	reviewsTimeResults, err := runQuery[timeRow](ctx, browser, reviewsTimeQuery, reviewsTimeParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -996,7 +1032,7 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type IN (1, 2)`
 	}
 
 	var denominator int
-	if periodId == "All time" && daysStudied > 0 && earliestReviewDayForAllTime != nil {
+	if periodID == periodAllTime && daysStudied > 0 && earliestReviewDayForAllTime != nil {
 		denominator = currentDayNumber - *earliestReviewDayForAllTime + 1
 	} else {
 		if periodDays <= 0 {

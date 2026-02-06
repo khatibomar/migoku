@@ -26,25 +26,24 @@ So that's why I built this project as a way to have an API that we can build coo
 ## Quick Start
 
 ```bash
-# Set credentials (optional, for auto-login)
-export EMAIL="your@email.com"
-export PASSWORD="yourpassword"
-export HEADLESS=true
+# Without container
+make run
 
-# Start container
+# With container
 make docker-run
 ```
 
 Server runs on `http://localhost:8080` with interactive API documentation at the root endpoint.
 
+> First login per user is going to be slow, cause the login page download a huge wasm file. Subsequent login requests will be faster.
+
 ## Configuration
 
 Environment variables:
-- `EMAIL` / `PASSWORD` - Migaku credentials for auto-login
 - `PORT` - Server port (default: 8080)
 - `HEADLESS` - Run browser headless (default: true, set to "false" for visible)
 - `CORS_ORIGINS` - Allowed CORS origins (comma-separated, default: "*")
-- `API_SECRET` - API key for authentication (optional, enables auth if set)
+- `API_SECRET` - Secret used to sign keys ( in case of comprimised key, change this and will generate new keys)
 - `CACHE_TTL` - Cache duration (default: 5m)
 - `LOG_LEVEL` - Log level: DEBUG, INFO, WARN, ERROR (default: INFO)
 - `TARGET_LANG` - Optional language selection when Migaku prompts (use language code like `ja` or name like `Japanese`)

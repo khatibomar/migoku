@@ -3,14 +3,12 @@ services:
     build:
       context: .
       args:
-        - EMAIL=${EMAIL}
-        - PASSWORD=${PASSWORD}
+        - API_SECRET=${API_SECRET:-top-secret}
         - HEADLESS=${HEADLESS:-true}
         - LOG_LEVEL=${LOG_LEVEL:-info}
         - PORT=${PORT:-8080}
-        - API_SECRET=${API_SECRET}
-        - CORS_ORIGINS=${CORS_ORIGINS}
-        - CACHE_TTL=${CACHE_TTL}
+        - CORS_ORIGINS=${CORS_ORIGINS:-*}
+        - CACHE_TTL=${CACHE_TTL:-5m}
     container_name: migoku
     ports:
       - "${PORT:-8080}:${PORT:-8080}"

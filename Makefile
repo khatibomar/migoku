@@ -3,7 +3,7 @@
 # Run the API server
 run:
 	@echo "Starting Migoku API Server..."
-	go run .
+	HEADLESS=false API_SECRET="top-secret" go run ./...
 
 # Build the server binary
 build:
@@ -23,4 +23,4 @@ clean:
 
 # Run linting
 lint:
-	golangci-lint run
+	golangci-lint run --config .golangci.yml
