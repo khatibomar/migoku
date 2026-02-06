@@ -81,7 +81,7 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	browser, err := NewBrowser(r.Context(), app.logger, email, password, language, app.headless)
+	browser, err := NewBrowser(app.logger, email, password, language, app.headless)
 	if err != nil {
 		app.logger.Error("Failed to initialize browser", "error", err)
 		http.Error(w, "Failed to initialize browser", http.StatusInternalServerError)

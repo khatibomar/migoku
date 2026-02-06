@@ -56,8 +56,12 @@ func browserRunContext(ctx context.Context, browser *Browser) (context.Context, 
 	return runCtx, cancel
 }
 
+// NewBrowser initializes a new browser instance and logs in to Migaku with the provided credentials.
+// It returns an error if login fails or if the browser cannot be initialized.
+// The returned Browser instance should be closed with the Close() method when no longer needed to free resources.
+
+//nolint:contextcheck,nolintlint // Browser manages its own context lifecycle.
 func NewBrowser(
-	ctx context.Context,
 	logger *slog.Logger,
 	email, password, language string,
 	headless bool,
@@ -100,17 +104,14 @@ func NewBrowser(
 	b.logger.Info("Launching browser...")
 	b.logger.Info("Logging in to Migaku...")
 
-	browserCtx, loginCancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(b.logger.Debug))
+	browserCtx, browserCancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(b.logger.Debug))
 	b.cleanUp = func() {
-		loginCancel()
 		allocCancel()
+		browserCancel()
 	}
 	b.ctx = browserCtx
 
-	runCtx, runCancel := browserRunContext(ctx, b)
-	defer runCancel()
-
-	err = chromedp.Run(runCtx,
+	err = chromedp.Run(browserCtx,
 		chromedp.Navigate("https://study.migaku.com/login"),
 		chromedp.WaitVisible("body", chromedp.ByQuery),
 	)
@@ -122,7 +123,7 @@ func NewBrowser(
 	time.Sleep(1 * time.Second)
 
 	var currentURL string
-	err = chromedp.Run(runCtx, chromedp.Location(&currentURL))
+	err = chromedp.Run(browserCtx, chromedp.Location(&currentURL))
 	if err != nil {
 		return
 	}
@@ -135,7 +136,7 @@ func NewBrowser(
 
 		// Check if login form exists
 		var loginFormExists bool
-		err = chromedp.Run(runCtx,
+		err = chromedp.Run(browserCtx,
 			chromedp.ActionFunc(func(ctx context.Context) error {
 				timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 				defer cancel()
@@ -151,7 +152,7 @@ func NewBrowser(
 
 		if loginFormExists {
 			b.logger.Info("Login form found, filling in credentials...")
-			err = chromedp.Run(runCtx,
+			err = chromedp.Run(browserCtx,
 				chromedp.SendKeys(`input[type="email"]`, email, chromedp.ByQuery),
 				chromedp.SendKeys(`input[type="password"]`, password, chromedp.ByQuery),
 				chromedp.Sleep(100*time.Millisecond),
@@ -161,7 +162,7 @@ func NewBrowser(
 			}
 
 			b.logger.Info("Submitting login form...")
-			err = chromedp.Run(runCtx,
+			err = chromedp.Run(browserCtx,
 				chromedp.Click(`button[type="submit"]`, chromedp.ByQuery),
 			)
 			if err != nil {
@@ -170,7 +171,7 @@ func NewBrowser(
 
 			b.logger.Info("Waiting for login to complete...")
 			// Wait for login form to disappear OR URL to change
-			err = chromedp.Run(runCtx,
+			err = chromedp.Run(browserCtx,
 				chromedp.ActionFunc(func(ctx context.Context) error {
 					// Wait for either form to disappear or URL to change
 					ticker := time.NewTicker(200 * time.Millisecond)
@@ -207,7 +208,7 @@ func NewBrowser(
 			b.logger.Info("Login form not found, but still on /login URL - likely already logged in, waiting for redirect...")
 			// Wait a bit more for redirect
 			time.Sleep(2 * time.Second)
-			err = chromedp.Run(runCtx, chromedp.Location(&currentURL))
+			err = chromedp.Run(browserCtx, chromedp.Location(&currentURL))
 			if err == nil {
 				b.logger.Info("URL after wait: " + currentURL)
 			}
@@ -216,7 +217,7 @@ func NewBrowser(
 		b.logger.Info("Already logged in (redirected away from /login)")
 	}
 
-	err = chromedp.Run(runCtx,
+	err = chromedp.Run(browserCtx,
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 			defer cancel()
@@ -227,7 +228,7 @@ func NewBrowser(
 		b.logger.Warn("Page readiness check failed, but continuing", "error", err)
 	}
 
-	if err = b.handleLanguageSelection(runCtx); err != nil {
+	if err = b.handleLanguageSelection(browserCtx); err != nil {
 		return
 	}
 
