@@ -23,7 +23,7 @@
     <p><strong>Note:</strong> Migoku is an unofficial community-made utility that provides API access to your local Migaku data.</p>
 
     <div class="auth-info">
-        <strong>Authentication:</strong> If API_SECRET is configured, include it in requests:<br>
+        <strong>Authentication:</strong> Most endpoints require <code>X-Api-Key</code> once authentication is enabled.<br>
         <code>X-Api-Key: your-secret</code>
     </div>
 
@@ -38,7 +38,10 @@
         • <code>language</code> (required): Migaku language code<br>
         <strong>Example:</strong><br>
         <code>{"email":"you@example.com","password":"yourpassword","language":"ja"}</code><br>
-        <pre class="response">{"api_key":"...","message":"Login successful"}</pre>
+        <pre class="response">{
+  "api_key": "...",
+  "message": "Login successful"
+}</pre>
     </div>
 
     <div class="endpoint">
@@ -46,7 +49,9 @@
         <div class="desc">Log out and close the browser session</div>
         Header:<br>
         • <code>X-Api-Key</code> (required)
-        <pre class="response">{"message":"Logout successful"}</pre>
+        <pre class="response">{
+  "message": "Logout successful"
+}</pre>
     </div>
 
     <h2>Words</h2>
@@ -63,7 +68,13 @@
         • <code>/api/v1/words?status=unknown</code> - unknown words<br>
         • <code>/api/v1/words?lang=ja</code> - all Japanese words<br>
         • <code>/api/v1/words?status=learning&lang=ja</code> - Japanese learning words<br>
-        <pre class="response">[{"dictForm":"本","secondary":"ほん","knownStatus":"KNOWN"}]</pre>
+        <pre class="response">[
+  {
+    "dictForm": "本",
+    "secondary": "ほん",
+    "knownStatus": "KNOWN"
+  }
+]</pre>
     </div>
 
     <div class="endpoint">
@@ -80,7 +91,9 @@
         <code>{"status":"known","wordText":"僕","secondary":"ぼく"}</code><br>
         <strong>Batch Example:</strong><br>
         <code>{"status":"learning","items":[{"wordText":"本","secondary":"ほん"},{"wordText":"水","secondary":"みず"}]}</code><br>
-        <pre class="response">{"ok":true}</pre>
+        <pre class="response">{
+  "ok": true
+}</pre>
     </div>
 
     <div class="endpoint">
@@ -90,16 +103,16 @@
         • <code>lang</code> (required): Language code<br>
         • <code>limit</code> (optional, default 50): Max results<br>
         • <code>deckId</code> (optional): Filter by deck<br>
-                <pre class="response">[
-    {
-        "dictForm": "難",
-        "secondary": "かた",
-        "partOfSpeech": "suffix",
-        "knownStatus": "LEARNING",
-        "total_reviews": 15,
-        "failed_reviews": 8,
-        "fail_rate": 53.33
-    }
+        <pre class="response">[
+  {
+    "dictForm": "難",
+    "secondary": "かた",
+    "partOfSpeech": "suffix",
+    "knownStatus": "LEARNING",
+    "total_reviews": 15,
+    "failed_reviews": 8,
+    "fail_rate": 53.33
+  }
 ]</pre>
     </div>
 
@@ -108,7 +121,12 @@
     <div class="endpoint">
         <span class="method get">GET</span> <code>/api/v1/decks</code><br>
         <div class="desc">Get all active decks</div>
-        <pre class="response">[{"id":1,"name":"Core 2k"}]</pre>
+        <pre class="response">[
+  {
+    "id": 1,
+    "name": "Core 2k"
+  }
+]</pre>
     </div>
 
     <h2>Counts</h2>
@@ -117,7 +135,14 @@
         <span class="method get">GET</span> <code>/api/v1/status/counts</code><br>
         <div class="desc">Get aggregated word status counts</div>
         Query: <code>?deckId=123&lang=ja</code> (both optional)<br>
-        <pre class="response">[{"known_count":606,"learning_count":79,"unknown_count":2551,"ignored_count":4}]</pre>
+        <pre class="response">[
+  {
+    "known_count": 606,
+    "learning_count": 79,
+    "unknown_count": 2551,
+    "ignored_count": 4
+  }
+]</pre>
     </div>
 
     <h2>Statistics:</h2>
@@ -128,7 +153,12 @@
         Query: <code>?lang=ja&deckId=123</code><br>
         • <code>lang</code> (required): Language code (e.g., <code>ja</code>)<br>
         • <code>deckId</code> (optional): Deck ID, or omit / use <code>all</code> for all decks<br>
-        <pre class="response">{"known_count":606,"learning_count":79,"unknown_count":2551,"ignored_count":4}</pre>
+        <pre class="response">{
+  "known_count": 606,
+  "learning_count": 79,
+  "unknown_count": 2551,
+  "ignored_count": 4
+}</pre>
     </div>
 
     <div class="endpoint">
@@ -191,13 +221,24 @@
     <div class="endpoint">
         <span class="method get">GET</span> <code>/dev/status</code><br>
         <div class="desc">Get server status and configuration</div>
-           <pre class="response">{"status":"running","cache_ttl":"5m0s","headless":true}</pre>
+        <pre class="response">{
+  "status": "running",
+  "cache_ttl": "5m0s",
+  "headless": true
+}</pre>
     </div>
 
     <div class="endpoint">
         <span class="method get">GET</span> <code>/dev/tables</code><br>
         <div class="desc">List all database tables</div>
-        <pre class="response">[{"name":"WordList"},{"name":"deck"}]</pre>
+        <pre class="response">[
+  {
+    "name": "WordList"
+  },
+  {
+    "name": "deck"
+  }
+]</pre>
     </div>
 
     <div class="endpoint">
@@ -219,7 +260,10 @@
     <div class="endpoint">
         <span class="method post">POST</span> <code>/dev/cache/clear</code><br>
         <div class="desc">Clear the in-memory cache</div>
-        <pre class="response">{"status":"success","message":"Cache cleared successfully"}</pre>
+        <pre class="response">{
+  "status": "success",
+  "message": "Cache cleared successfully"
+}</pre>
     </div>
 </body>
 </html>
