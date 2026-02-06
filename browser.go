@@ -15,6 +15,10 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+const (
+	languageSelectURL = "https://study.migaku.com/?selectLanguage=true"
+)
+
 type languageSelectionResult struct {
 	Clicked bool   `json:"clicked"`
 	Method  string `json:"method,omitempty"`
@@ -85,7 +89,7 @@ func NewBrowser(
 		return
 	}
 
-	profileDir := "Profile-" + strings.NewReplacer("@", "_", ".", "_", "+", "_").Replace(strings.ToLower(email))
+	profileDir := "Profile-" + hashProfileDirKey(email, language)
 	const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
 		"AppleWebKit/537.36 (KHTML, like Gecko) " +
 		"Chrome/120.0.0.0 Safari/537.36"
@@ -237,15 +241,9 @@ func NewBrowser(
 }
 
 func (b *Browser) handleLanguageSelection(ctx context.Context) error {
-	var currentURL string
-	if err := chromedp.Run(ctx, chromedp.Location(&currentURL)); err != nil {
-		return err
+	if err := chromedp.Run(ctx, chromedp.Navigate(languageSelectURL)); err != nil {
+		return fmt.Errorf("failed to navigate to language selection page: %w", err)
 	}
-
-	if !strings.Contains(currentURL, "selectLanguage=true") {
-		return nil
-	}
-
 	normalized := strings.ToLower(strings.TrimSpace(b.language))
 	if normalized == "" {
 		return errors.New("language selection required: set TARGET_LANG env var to a Migaku language code or name")
@@ -281,4 +279,13 @@ func (b *Browser) Close() {
 	if b.cleanUp != nil {
 		b.cleanUp()
 	}
+}
+
+func hashProfileDirKey(email, language string) string {
+	key := email + "|" + language
+	hash := 0
+	for _, r := range key {
+		hash = int(r) + ((hash << 5) - hash)
+	}
+	return fmt.Sprintf("%x", hash)
 }
