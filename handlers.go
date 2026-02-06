@@ -9,8 +9,11 @@ import (
 	"strings"
 )
 
-//go:embed api.html
-var apiHTML []byte
+//go:embed docs.html
+var docsHTML []byte
+
+//go:embed openapi.yaml
+var openAPISpec []byte
 
 func (app *Application) respondJSON(w http.ResponseWriter, data any) {
 	if err := encode(w, nil, http.StatusOK, data); err != nil {
@@ -346,10 +349,30 @@ func (app *Application) handleRoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.Redirect(w, r, "/docs", http.StatusFound)
+}
+
+func (app *Application) handleDocs(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/docs" {
+		app.writeJSONError(w, r, http.StatusNotFound, "The requested endpoint does not exist")
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err := w.Write(apiHTML)
-	if err != nil {
-		app.logger.Error("Failed to write root response", slog.String("error", err.Error()))
+	if _, err := w.Write(docsHTML); err != nil {
+		app.logger.Error("Failed to write docs response", slog.String("error", err.Error()))
+	}
+}
+
+func (app *Application) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/openapi.yaml" {
+		app.writeJSONError(w, r, http.StatusNotFound, "The requested endpoint does not exist")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
+	if _, err := w.Write(openAPISpec); err != nil {
+		app.logger.Error("Failed to write OpenAPI spec", slog.String("error", err.Error()))
 	}
 }
 

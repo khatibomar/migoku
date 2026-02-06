@@ -114,6 +114,8 @@ func realMain(logger *slog.Logger) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", chainMiddlewares(app.handleRoot, app.corsMiddleware))
+	mux.HandleFunc("/docs", chainMiddlewares(app.handleDocs, app.corsMiddleware))
+	mux.HandleFunc("/openapi.yaml", chainMiddlewares(app.handleOpenAPISpec, app.corsMiddleware))
 	mux.HandleFunc("/auth/login", chainMiddlewares(app.handleLogin, app.corsMiddleware))
 	mux.HandleFunc("/auth/logout", chainMiddlewares(app.handleLogout, app.corsMiddleware, app.authMiddleware))
 

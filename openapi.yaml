@@ -1,0 +1,604 @@
+openapi: 3.0.3
+info:
+  title: Migoku API
+  version: beta
+  description: |
+    REST API for accessing Migaku local data via browser automation and caching.
+    Most endpoints require `X-Api-Key` once authentication is enabled.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Auth
+  - name: Words
+  - name: Decks
+  - name: Counts
+  - name: Stats
+  - name: Dev
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and receive an API key
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: you@example.com
+              password: yourpassword
+              language: ja
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                api_key: "..."
+                message: Login successful
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and close the browser session
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Logout successful
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/words:
+    get:
+      tags: [Words]
+      summary: Get words with optional filters
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [known, learning, unknown, ignored]
+          description: Filter by status
+        - in: query
+          name: lang
+          schema:
+            type: string
+          description: Filter by language code (e.g. ja, en)
+      responses:
+        '200':
+          description: List of words
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Word'
+              example:
+                - dictForm: "本"
+                  secondary: "ほん"
+                  knownStatus: "KNOWN"
+        '400':
+          description: Invalid status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/words/status:
+    post:
+      tags: [Words]
+      summary: Change a word status in Migaku
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordStatusRequest'
+            examples:
+              single:
+                value:
+                  status: known
+                  wordText: "僕"
+                  secondary: "ぼく"
+              batch:
+                value:
+                  status: learning
+                  items:
+                    - wordText: "本"
+                      secondary: "ほん"
+                    - wordText: "水"
+                      secondary: "みず"
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WordStatusResponse'
+              example:
+                ok: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/words/difficult:
+    get:
+      tags: [Words]
+      summary: Get words with highest fail rates
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: lang
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+        - in: query
+          name: deckId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of difficult words
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DifficultWord'
+  /api/v1/decks:
+    get:
+      tags: [Decks]
+      summary: Get all active decks
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: List of decks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Deck'
+  /api/v1/status/counts:
+    get:
+      tags: [Counts]
+      summary: Get aggregated word status counts
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: deckId
+          schema:
+            type: string
+        - in: query
+          name: lang
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Aggregated counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StatusCounts'
+  /api/v1/stats/words:
+    get:
+      tags: [Stats]
+      summary: Get aggregated word status counts for a language
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: lang
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: deckId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Aggregated counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusCounts'
+  /api/v1/stats/due:
+    get:
+      tags: [Stats]
+      summary: Get forecast of cards due per day for a given period
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: lang
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: deckId
+          schema:
+            type: string
+        - in: query
+          name: periodId
+          schema:
+            type: string
+            description: One of 1 Month, 2 Months, 3 Months, 6 Months, 1 Year, All time
+      responses:
+        '200':
+          description: Due forecast
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DueStats'
+  /api/v1/stats/intervals:
+    get:
+      tags: [Stats]
+      summary: Get distribution of card intervals
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: lang
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: deckId
+          schema:
+            type: string
+        - in: query
+          name: percentileId
+          schema:
+            type: string
+            description: e.g. 50th, 75th, 90th
+      responses:
+        '200':
+          description: Interval distribution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntervalStats'
+  /api/v1/stats/study:
+    get:
+      tags: [Stats]
+      summary: Get study statistics over a time period
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: lang
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: deckId
+          schema:
+            type: string
+        - in: query
+          name: periodId
+          schema:
+            type: string
+            description: One of 1 Month, 2 Months, 3 Months, 6 Months, 1 Year, All time
+      responses:
+        '200':
+          description: Study statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyStats'
+  /dev/status:
+    get:
+      tags: [Dev]
+      summary: Get server status and configuration
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Server status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevStatus'
+  /dev/tables:
+    get:
+      tags: [Dev]
+      summary: List all database tables
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Table list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Table'
+  /dev/database/schema:
+    get:
+      tags: [Dev]
+      summary: Get complete database schema
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Database schema
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    $ref: '#/components/schemas/SchemaColumn'
+  /dev/cache/clear:
+    post:
+      tags: [Dev]
+      summary: Clear the in-memory cache
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Cache cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                status: success
+                message: Cache cleared successfully
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required: [error]
+    MessageResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        language:
+          type: string
+      required: [email, password, language]
+    LoginResponse:
+      type: object
+      properties:
+        api_key:
+          type: string
+        message:
+          type: string
+      required: [api_key, message]
+    Word:
+      type: object
+      properties:
+        dictForm:
+          type: string
+        secondary:
+          type: string
+        knownStatus:
+          type: string
+      required: [dictForm, secondary]
+    WordStatusItem:
+      type: object
+      properties:
+        wordText:
+          type: string
+        secondary:
+          type: string
+      required: [wordText]
+    WordStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [known, learning, tracked, ignored]
+        wordText:
+          type: string
+        secondary:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordStatusItem'
+      required: [status]
+      description: |
+        When items is provided, the batch update is used. Otherwise, wordText is required.
+    WordStatusResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+    DifficultWord:
+      type: object
+      properties:
+        dictForm:
+          type: string
+        secondary:
+          type: string
+        partOfSpeech:
+          type: string
+        knownStatus:
+          type: string
+        total_reviews:
+          type: integer
+        failed_reviews:
+          type: integer
+        fail_rate:
+          type: number
+          format: float
+    Deck:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required: [id, name]
+    StatusCounts:
+      type: object
+      properties:
+        known_count:
+          type: integer
+        learning_count:
+          type: integer
+        unknown_count:
+          type: integer
+        ignored_count:
+          type: integer
+    DueStats:
+      type: object
+      properties:
+        labels:
+          type: array
+          items:
+            type: string
+        counts:
+          type: array
+          items:
+            type: integer
+        knownCounts:
+          type: array
+          items:
+            type: integer
+        learningCounts:
+          type: array
+          items:
+            type: integer
+    IntervalStats:
+      type: object
+      properties:
+        labels:
+          type: array
+          items:
+            type: string
+        counts:
+          type: array
+          items:
+            type: integer
+    StudyStats:
+      type: object
+      properties:
+        days_studied:
+          type: integer
+        days_studied_percent:
+          type: integer
+        total_reviews:
+          type: integer
+        avg_reviews_per_calendar_day:
+          type: number
+          format: float
+        period_days:
+          type: integer
+        pass_rate:
+          type: integer
+        new_cards_per_day:
+          type: number
+          format: float
+        total_new_cards:
+          type: integer
+        total_cards_added:
+          type: integer
+        cards_added_per_day:
+          type: number
+          format: float
+        total_cards_learned:
+          type: integer
+        cards_learned_per_day:
+          type: number
+          format: float
+        total_time_new_cards_seconds:
+          type: integer
+        avg_time_new_card_seconds:
+          type: number
+          format: float
+        total_time_reviews_seconds:
+          type: integer
+        avg_time_review_seconds:
+          type: number
+          format: float
+    DevStatus:
+      type: object
+      properties:
+        status:
+          type: string
+        cache_ttl:
+          type: string
+        headless:
+          type: boolean
+    Table:
+      type: object
+      properties:
+        name:
+          type: string
+    SchemaColumn:
+      type: object
+      properties:
+        type:
+          type: string
+        notNull:
+          type: boolean
+        primaryKey:
+          type: boolean
