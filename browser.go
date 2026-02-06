@@ -76,9 +76,9 @@ func NewBrowser(
 	}
 
 	userDataDir := filepath.Join(os.TempDir(), "migoku-browser")
-	if err := os.MkdirAll(userDataDir, os.ModePerm); err != nil {
+	if err = os.MkdirAll(userDataDir, os.ModePerm); err != nil {
 		b.logger.Error("failed to get temp user data dir", "error", err)
-		return b, err
+		return
 	}
 
 	profileDir := "Profile-" + strings.NewReplacer("@", "_", ".", "_", "+", "_").Replace(strings.ToLower(email))
@@ -115,7 +115,7 @@ func NewBrowser(
 		chromedp.WaitVisible("body", chromedp.ByQuery),
 	)
 	if err != nil {
-		return b, err
+		return
 	}
 
 	// Wait a bit for any redirects to complete
@@ -124,7 +124,7 @@ func NewBrowser(
 	var currentURL string
 	err = chromedp.Run(runCtx, chromedp.Location(&currentURL))
 	if err != nil {
-		return b, err
+		return
 	}
 
 	b.logger.Info("Current URL: " + currentURL)
@@ -146,7 +146,7 @@ func NewBrowser(
 		)
 		if err != nil {
 			b.logger.Error("Error checking for login form", "error", err)
-			return b, err
+			return
 		}
 
 		if loginFormExists {
@@ -157,7 +157,7 @@ func NewBrowser(
 				chromedp.Sleep(100*time.Millisecond),
 			)
 			if err != nil {
-				return b, err
+				return
 			}
 
 			b.logger.Info("Submitting login form...")
@@ -165,7 +165,7 @@ func NewBrowser(
 				chromedp.Click(`button[type="submit"]`, chromedp.ByQuery),
 			)
 			if err != nil {
-				return b, err
+				return
 			}
 
 			b.logger.Info("Waiting for login to complete...")
@@ -199,7 +199,7 @@ func NewBrowser(
 			)
 			if err != nil {
 				err = fmt.Errorf("login process failed: %w", err)
-				return b, err
+				return
 			}
 
 			b.logger.Info("Login successful")
@@ -228,11 +228,11 @@ func NewBrowser(
 	}
 
 	if err = b.handleLanguageSelection(runCtx); err != nil {
-		return b, err
+		return
 	}
 
 	b.logger.Info("Browser initialized and ready")
-	return b, nil
+	return
 }
 
 func (b *Browser) handleLanguageSelection(ctx context.Context) error {
