@@ -1,22 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 )
 
-func runQuery[T any](app *Application, query string, params ...any) ([]T, error) {
-	isAuth := app.isAuthenticated.Load()
-
-	if !isAuth {
-		return nil, errors.New("browser not authenticated")
-	}
-
-	app.logger.Info("Running query", "query", query, "params", params)
+func runQuery[T any](ctx context.Context, browser *Browser, query string, params ...any) ([]T, error) {
+	browser.logger.Info("Running query", "query", query, "params", params)
 
 	paramsJSON := "[]"
 	if len(params) > 0 {
@@ -151,11 +145,13 @@ func runQuery[T any](app *Application, query string, params ...any) ([]T, error)
 
 	var result []T
 	eval := chromedp.Evaluate(script, &result, awaitPromise)
-	if err := chromedp.Run(app.browserCtx, eval); err != nil {
-		app.logger.Error("Query execution failed", "error", err)
+	runCtx, cancel := browserRunContext(ctx, browser)
+	defer cancel()
+	if err := chromedp.Run(runCtx, eval); err != nil {
+		browser.logger.Error("Query execution failed", "error", err)
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 
-	app.logger.Info("Query completed", "rows", len(result))
+	browser.logger.Info("Query completed", "rows", len(result))
 	return result, nil
 }

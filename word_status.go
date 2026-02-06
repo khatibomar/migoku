@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -40,9 +41,12 @@ func normalizeWordStatus(status string) (string, string, bool) {
 	return normalized, actionLabel, ok
 }
 
-func (s *MigakuService) SetWordStatus(wordText, secondary, status string) (*WordStatusResult, error) {
-	app := s.repo.app
-	if !app.isAuthenticated.Load() {
+func (s *MigakuService) SetWordStatus(
+	ctx context.Context,
+	browser *Browser,
+	wordText, secondary, status string,
+) (*WordStatusResult, error) {
+	if browser == nil {
 		return nil, errors.New("browser not authenticated")
 	}
 
@@ -74,11 +78,13 @@ func (s *MigakuService) SetWordStatus(wordText, secondary, status string) (*Word
 		return p.WithAwaitPromise(true)
 	}
 
-	app.logger.Info("Updating word status", "status", status, "wordText", wordText, "secondary", secondary)
+	browser.logger.Info("Updating word status", "status", status, "wordText", wordText, "secondary", secondary)
 
 	var result WordStatusResult
 	eval := chromedp.Evaluate(script, &result, awaitPromise)
-	if err := chromedp.Run(app.browserCtx,
+	runCtx, cancel := browserRunContext(ctx, browser)
+	defer cancel()
+	if err := chromedp.Run(runCtx,
 		chromedp.Navigate(wordBrowserURL),
 		chromedp.WaitReady("body", chromedp.ByQuery),
 		eval,

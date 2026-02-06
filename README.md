@@ -26,16 +26,16 @@ So that's why I built this project as a way to have an API that we can build coo
 ## Quick Start
 
 ```bash
-# Set credentials (optional, for auto-login)
-export EMAIL="your@email.com"
-export PASSWORD="yourpassword"
-export HEADLESS=true
+# Without container
+make run
 
-# Start container
+# With container
 make docker-run
 ```
 
 Server runs on `http://localhost:8080` with interactive API documentation at the root endpoint.
+
+> First login per user is going to be slow, cause the login page download a huge wasm file. Subsequent login requests will be faster.
 
 ## Configuration
 

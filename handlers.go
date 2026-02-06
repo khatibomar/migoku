@@ -19,6 +19,16 @@ func (app *Application) respondJSON(w http.ResponseWriter, data any) {
 	}
 }
 
+func (app *Application) requireBrowser(w http.ResponseWriter, r *http.Request) (*Browser, bool) {
+	browser, ok := browserFromContext(r.Context())
+	if ok {
+		return browser, true
+	}
+
+	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	return nil, false
+}
+
 type wordStatusRequest struct {
 	Status    string `json:"status"`
 	WordText  string `json:"wordText"`
@@ -26,18 +36,23 @@ type wordStatusRequest struct {
 }
 
 func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
 	lang := r.URL.Query().Get("lang")
 	status := r.URL.Query().Get("status")
 
-	words, err := app.service.GetWords(lang, status)
+	words, err := app.service.GetWords(r.Context(), browser, lang, status)
 	if err != nil {
 		if err.Error() == "invalid status: must be one of: known, learning, unknown, ignored" {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusBadRequest)
-			_, writeErr := w.Write([]byte(`{"error": "invalid status", "message": "Status must be one of: known, learning, unknown, ignored"}`))
-			if writeErr != nil {
-				app.logger.Error("Failed to write error response", "error", writeErr)
-			}
+			app.respondJSON(w, map[string]string{
+				"error":   "invalid status",
+				"message": "Status must be one of: known, learning, unknown, ignored",
+			})
 			return
 		}
 		app.logger.Error("Failed to get words", "error", err, "status", status)
@@ -49,6 +64,11 @@ func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Request) {
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
 	var req wordStatusRequest
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -96,9 +116,19 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	result, err := app.service.SetWordStatus(req.WordText, req.Secondary, req.Status)
+	result, err := app.service.SetWordStatus(r.Context(), browser, req.WordText, req.Secondary, req.Status)
 	if err != nil {
-		app.logger.Error("Failed to update word status", "error", err, "status", req.Status, "wordText", req.WordText, "secondary", req.Secondary)
+		app.logger.Error(
+			"Failed to update word status",
+			"error",
+			err,
+			"status",
+			req.Status,
+			"wordText",
+			req.WordText,
+			"secondary",
+			req.Secondary,
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -107,7 +137,12 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *Application) handleDecks(w http.ResponseWriter, r *http.Request) {
-	decks, err := app.service.GetDecks()
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
+	decks, err := app.service.GetDecks(r.Context(), browser)
 	if err != nil {
 		app.logger.Error("Failed to get decks", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -118,10 +153,15 @@ func (app *Application) handleDecks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) handleStatusCounts(w http.ResponseWriter, r *http.Request) {
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
 	lang := r.URL.Query().Get("lang")
 	deckID := r.URL.Query().Get("deckId")
 
-	counts, err := app.service.GetStatusCounts(lang, deckID)
+	counts, err := app.service.GetStatusCounts(r.Context(), browser, lang, deckID)
 	if err != nil {
 		app.logger.Error("Failed to get status counts", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -133,7 +173,12 @@ func (app *Application) handleStatusCounts(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *Application) handleTables(w http.ResponseWriter, r *http.Request) {
-	tables, err := app.service.GetTables()
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
+	tables, err := app.service.GetTables(r.Context(), browser)
 	if err != nil {
 		app.logger.Error("Failed to get tables", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -144,7 +189,12 @@ func (app *Application) handleTables(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) handleDatabaseSchema(w http.ResponseWriter, r *http.Request) {
-	schema, err := app.service.GetDatabaseSchema()
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
+	schema, err := app.service.GetDatabaseSchema(r.Context(), browser)
 	if err != nil {
 		app.logger.Error("Failed to get database schema", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -155,6 +205,11 @@ func (app *Application) handleDatabaseSchema(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *Application) handleDifficultWords(w http.ResponseWriter, r *http.Request) {
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
 	lang := r.URL.Query().Get("lang")
 	limit := 50
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -174,7 +229,7 @@ func (app *Application) handleDifficultWords(w http.ResponseWriter, r *http.Requ
 
 	deckID := r.URL.Query().Get("deckId")
 
-	words, err := app.service.GetDifficultWords(lang, limit, deckID)
+	words, err := app.service.GetDifficultWords(r.Context(), browser, lang, limit, deckID)
 	if err != nil {
 		app.logger.Error("Failed to get difficult words", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -184,6 +239,11 @@ func (app *Application) handleDifficultWords(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *Application) handleWordStats(w http.ResponseWriter, r *http.Request) {
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
 	lang := r.URL.Query().Get("lang")
 	if lang == "" {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -196,7 +256,7 @@ func (app *Application) handleWordStats(w http.ResponseWriter, r *http.Request) 
 
 	deckID := r.URL.Query().Get("deckId")
 
-	stats, err := app.service.GetWordStats(lang, deckID)
+	stats, err := app.service.GetWordStats(r.Context(), browser, lang, deckID)
 	if err != nil {
 		app.logger.Error("Failed to get word stats", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -206,6 +266,11 @@ func (app *Application) handleWordStats(w http.ResponseWriter, r *http.Request) 
 }
 
 func (app *Application) handleDueStats(w http.ResponseWriter, r *http.Request) {
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
 	lang := r.URL.Query().Get("lang")
 	if lang == "" {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -217,9 +282,9 @@ func (app *Application) handleDueStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	deckID := r.URL.Query().Get("deckId")
-	periodId := r.URL.Query().Get("periodId")
+	periodID := r.URL.Query().Get("periodId")
 
-	stats, err := app.service.GetDueStats(lang, deckID, periodId)
+	stats, err := app.service.GetDueStats(r.Context(), browser, lang, deckID, periodID)
 	if err != nil {
 		app.logger.Error("Failed to get due stats", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -229,6 +294,11 @@ func (app *Application) handleDueStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) handleIntervalStats(w http.ResponseWriter, r *http.Request) {
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
 	lang := r.URL.Query().Get("lang")
 	if lang == "" {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -240,9 +310,9 @@ func (app *Application) handleIntervalStats(w http.ResponseWriter, r *http.Reque
 	}
 
 	deckID := r.URL.Query().Get("deckId")
-	percentileId := r.URL.Query().Get("percentileId")
+	percentileID := r.URL.Query().Get("percentileId")
 
-	stats, err := app.service.GetIntervalStats(lang, deckID, percentileId)
+	stats, err := app.service.GetIntervalStats(r.Context(), browser, lang, deckID, percentileID)
 	if err != nil {
 		app.logger.Error("Failed to get interval stats", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -252,6 +322,11 @@ func (app *Application) handleIntervalStats(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request) {
+	browser, ok := app.requireBrowser(w, r)
+	if !ok {
+		return
+	}
+
 	lang := r.URL.Query().Get("lang")
 	if lang == "" {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -263,9 +338,9 @@ func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request)
 	}
 
 	deckID := r.URL.Query().Get("deckId")
-	periodId := r.URL.Query().Get("periodId")
+	periodID := r.URL.Query().Get("periodId")
 
-	stats, err := app.service.GetStudyStats(lang, deckID, periodId)
+	stats, err := app.service.GetStudyStats(r.Context(), browser, lang, deckID, periodID)
 	if err != nil {
 		app.logger.Error("Failed to get study stats", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -275,13 +350,10 @@ func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request)
 }
 
 func (app *Application) handleStatus(w http.ResponseWriter, r *http.Request) {
-	isAuth := app.isAuthenticated.Load()
-
 	app.respondJSON(w, map[string]any{
-		"status":        "running",
-		"authenticated": isAuth,
-		"cache_ttl":     app.cache.ttl.String(),
-		"headless":      app.headless,
+		"status":    "running",
+		"cache_ttl": app.cache.ttl.String(),
+		"headless":  app.headless,
 	})
 }
 

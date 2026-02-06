@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // wordRow represents a word row from the WordList table
 type wordRow struct {
@@ -26,20 +29,20 @@ type statusCountRow struct {
 	Count  int    `json:"count"`
 }
 
+const deckIDClause = " AND c.deckId = ?"
+
 // Repository handles database operations
-type Repository struct {
-	app *Application
-}
+type Repository struct{}
 
 // NewRepository creates a new repository instance
-func NewRepository(app *Application) *Repository {
-	return &Repository{app: app}
+func NewRepository() *Repository {
+	return &Repository{}
 }
 
 // GetWords retrieves words from WordList with optional filters
 // status can be empty for all words, or "KNOWN", "LEARNING", etc.
 // limit can be 0 for no limit
-func (r *Repository) GetWords(lang, status string, limit int) ([]wordRow, error) {
+func (r *Repository) GetWords(ctx context.Context, browser *Browser, lang, status string, limit int) ([]wordRow, error) {
 	var query string
 	var params []any
 
@@ -62,7 +65,7 @@ func (r *Repository) GetWords(lang, status string, limit int) ([]wordRow, error)
 
 	query += ";"
 
-	words, err := runQuery[wordRow](r.app, query, params...)
+	words, err := runQuery[wordRow](ctx, browser, query, params...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get words: %w", err)
 	}
@@ -71,9 +74,9 @@ func (r *Repository) GetWords(lang, status string, limit int) ([]wordRow, error)
 }
 
 // GetDecks retrieves all active decks
-func (r *Repository) GetDecks() ([]deckRow, error) {
+func (r *Repository) GetDecks(ctx context.Context, browser *Browser) ([]deckRow, error) {
 	query := "SELECT id, name FROM deck WHERE del = 0 ORDER BY name;"
-	decks, err := runQuery[deckRow](r.app, query)
+	decks, err := runQuery[deckRow](ctx, browser, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get decks: %w", err)
 	}
@@ -82,7 +85,7 @@ func (r *Repository) GetDecks() ([]deckRow, error) {
 }
 
 // GetStatusCounts retrieves status counts with optional filters
-func (r *Repository) GetStatusCounts(lang, deckID string) ([]statusCountRow, error) {
+func (r *Repository) GetStatusCounts(ctx context.Context, browser *Browser, lang, deckID string) ([]statusCountRow, error) {
 	var params []any
 
 	query := "SELECT knownStatus as status, count(1) as count FROM WordList WHERE del = 0"
@@ -99,7 +102,7 @@ func (r *Repository) GetStatusCounts(lang, deckID string) ([]statusCountRow, err
 
 	query += " GROUP BY knownStatus;"
 
-	rows, err := runQuery[statusCountRow](r.app, query, params...)
+	rows, err := runQuery[statusCountRow](ctx, browser, query, params...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get status counts: %w", err)
 	}
@@ -108,9 +111,9 @@ func (r *Repository) GetStatusCounts(lang, deckID string) ([]statusCountRow, err
 }
 
 // GetTables retrieves all database tables
-func (r *Repository) GetTables() ([]tableRow, error) {
+func (r *Repository) GetTables(ctx context.Context, browser *Browser) ([]tableRow, error) {
 	query := "SELECT name FROM sqlite_master WHERE type='table';"
-	tables, err := runQuery[tableRow](r.app, query)
+	tables, err := runQuery[tableRow](ctx, browser, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tables: %w", err)
 	}
@@ -130,7 +133,13 @@ type difficultWordRow struct {
 }
 
 // GetDifficultWords retrieves words with highest fail rates (min 5 reviews)
-func (r *Repository) GetDifficultWords(lang string, limit int, deckID string) ([]difficultWordRow, error) {
+func (r *Repository) GetDifficultWords(
+	ctx context.Context,
+	browser *Browser,
+	lang string,
+	limit int,
+	deckID string,
+) ([]difficultWordRow, error) {
 	var params []any
 	query := `SELECT 
 	            w.dictForm,
@@ -150,7 +159,7 @@ func (r *Repository) GetDifficultWords(lang string, limit int, deckID string) ([
 	params = append(params, lang)
 
 	if deckID != "" {
-		query += " AND c.deckId = ?"
+		query += deckIDClause
 		params = append(params, deckID)
 	}
 
@@ -162,7 +171,7 @@ func (r *Repository) GetDifficultWords(lang string, limit int, deckID string) ([
 
 	params = append(params, limit)
 
-	words, err := runQuery[difficultWordRow](r.app, query, params...)
+	words, err := runQuery[difficultWordRow](ctx, browser, query, params...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get difficult words: %w", err)
 	}
@@ -179,7 +188,7 @@ type schemaRow struct {
 }
 
 // GetDatabaseSchema retrieves the database schema from sqlite_master
-func (r *Repository) GetDatabaseSchema() ([]schemaRow, error) {
+func (r *Repository) GetDatabaseSchema(ctx context.Context, browser *Browser) ([]schemaRow, error) {
 	query := `SELECT
 	            m.name AS table_name,
 	            p.name AS column_name,
@@ -191,7 +200,7 @@ func (r *Repository) GetDatabaseSchema() ([]schemaRow, error) {
 	          WHERE m.type = 'table'
 	          ORDER BY m.name, p.cid;`
 
-	schema, err := runQuery[schemaRow](r.app, query)
+	schema, err := runQuery[schemaRow](ctx, browser, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database schema: %w", err)
 	}

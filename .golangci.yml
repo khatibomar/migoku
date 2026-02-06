@@ -1,0 +1,152 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - exhaustruct # seems like a good idea at first but actually a pain and go does have zero values for a reason.
+    - gochecknoglobals
+    - gochecknoinits
+    # can't get it to accept //nolint so... have to disable it
+    - gomoddirectives
+    - mnd
+    - musttag
+    - nlreturn
+    - nonamedreturns
+    - tagliatelle
+    - testpackage
+    - varnamelen
+    - wrapcheck
+    - nestif
+    # consider putting these back, when they stop being bugged (ifshort, wastedassign,...)
+    - paralleltest
+    - thelper
+    - forbidigo
+    - wastedassign
+    - cyclop
+    - forcetypeassert
+    - ireturn
+    - depguard
+    - dupl # can be useful, but annoying.
+    - funlen
+    - gocognit
+    - gocyclo # I am okay with huge methods
+    - maintidx
+    # newer bad ones:
+    - wsl
+    - wsl_v5
+    - funcorder
+    - noinlineerr # prize for worst linter ever
+    - embeddedstructfieldcheck
+    - gosmopolitan
+    - tparallel # useful, but in integration tests we don't want it
+    - godot
+    - nakedret
+  settings:
+    staticcheck:
+      # dot-import-whitelist: [] # Note: not yet working
+      dot-import-whitelist:
+        - github.com/does/not/exist # until we can put [] in the config
+      # http-status-code-whitelist: [] # Note: not yet working
+      http-status-code-whitelist:
+        - "418" # until we can put [] in the config/allow teapot!
+      checks:
+        - all
+        - -QF1008
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocritic:
+      disabled-checks:
+        - ifElseChain # I love if else
+        - singleCaseSwitch # I love switch
+    revive:
+      rules:
+          - name: unexported-return
+            disabled: true
+    govet:
+      enable-all: true
+      disable-all: false
+      disable:
+        - shadow
+      settings:
+        printf:
+          funcs:
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Printf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).FErrf
+    lll:
+      line-length: 132
+      tab-width: 1
+    misspell:
+      locale: US
+    nakedret:
+      max-func-lines: 30
+    nestif:
+      min-complexity: 4
+    nolintlint:
+      require-specific: true
+      require-explanation: true
+    whitespace:
+      multi-if: false
+      multi-func: false
+    perfsprint:
+      strconcat: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - err113
+          - errcheck
+          - forcetypeassert
+          - gochecknoglobals
+          - gochecknoinits
+          - goconst
+          - gocyclo
+          - gosec
+          - noctx
+          - nosnakecase
+        path: _test\.go
+      - linters:
+          - lll
+        source: '^//go:generate '
+      - linters:
+          - err113
+        text: do not define dynamic errors
+      - linters:
+          - govet
+        text: 'fieldalignment:'
+      - linters:
+          - godox
+        text: TODO
+      - linters:
+          - nosnakecase
+        text: grpc_|_SERVING|O_
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+severity:
+  default: error
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      extra-rules: false
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
