@@ -44,7 +44,7 @@ Environment variables:
 - `PORT` - Server port (default: 8080)
 - `CORS_ORIGINS` - Allowed CORS origins (comma-separated, default: "*")
 - `API_SECRET` - Secret used to sign keys ( in case of comprimised key, change this and will generate new keys)
-- `CACHE_TTL` - Cache duration (default: 5m)
+- `CACHE_TTL` - Cache duration (default: 10s) this also interval to update database with migaku so the shorter it is the more accurate.
 - `LOG_LEVEL` - Log level: DEBUG, INFO, WARN, ERROR (default: INFO)
 
 ## Development

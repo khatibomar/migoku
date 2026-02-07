@@ -123,13 +123,13 @@ func (r *Repository) GetTables(ctx context.Context, client *MigakuClient) ([]tab
 
 // difficultWordRow represents words with high fail rates
 type difficultWordRow struct {
-	DictForm      string  `db:"dictForm"      json:"dictForm"`
-	Secondary     string  `db:"secondary"     json:"secondary"`
-	PartOfSpeech  string  `db:"partOfSpeech"  json:"partOfSpeech"`
-	KnownStatus   string  `db:"knownStatus"   json:"knownStatus"`
-	TotalReviews  int     `db:"total_reviews" json:"total_reviews"`
+	DictForm      string  `db:"dictForm"       json:"dictForm"`
+	Secondary     string  `db:"secondary"      json:"secondary"`
+	PartOfSpeech  string  `db:"partOfSpeech"   json:"partOfSpeech"`
+	KnownStatus   string  `db:"knownStatus"    json:"knownStatus"`
+	TotalReviews  int     `db:"total_reviews"  json:"total_reviews"`
 	FailedReviews int     `db:"failed_reviews" json:"failed_reviews"`
-	FailRate      float64 `db:"fail_rate"     json:"fail_rate"`
+	FailRate      float64 `db:"fail_rate"      json:"fail_rate"`
 }
 
 // GetDifficultWords retrieves words with highest fail rates (min 5 reviews)

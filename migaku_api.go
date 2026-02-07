@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -170,6 +171,8 @@ func (s *MigakuSession) ForceDownloadSRSDB(ctx context.Context) ([]byte, error) 
 		return nil, errors.New("missing auth token")
 	}
 
+	slog.Default().Debug("Requesting SRS database download URL")
+
 	respBody, status, err := s.doAuthorizedJSONRequest(ctx, http.MethodGet, migakuPresignedURLService, nil)
 	if err != nil {
 		return nil, err
@@ -182,6 +185,8 @@ func (s *MigakuSession) ForceDownloadSRSDB(ctx context.Context) ([]byte, error) 
 	if downloadURL == "" {
 		return nil, errors.New("empty download url")
 	}
+
+	slog.Default().Debug("Downloading SRS database")
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
@@ -201,6 +206,7 @@ func (s *MigakuSession) ForceDownloadSRSDB(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, err
 	}
+	slog.Default().Debug("Downloaded compressed database", "bytes", len(compressed))
 
 	zr, err := gzip.NewReader(bytes.NewReader(compressed))
 	if err != nil {
@@ -208,7 +214,12 @@ func (s *MigakuSession) ForceDownloadSRSDB(ctx context.Context) ([]byte, error) 
 	}
 	defer zr.Close()
 
-	return io.ReadAll(zr)
+	data, err := io.ReadAll(zr)
+	if err != nil {
+		return nil, err
+	}
+	slog.Default().Debug("Decompressed database", "bytes", len(data))
+	return data, nil
 }
 
 func (s *MigakuSession) PushSync(ctx context.Context, words []map[string]any) error {
@@ -219,6 +230,8 @@ func (s *MigakuSession) PushSync(ctx context.Context, words []map[string]any) er
 	if len(words) == 0 {
 		return errors.New("no words to sync")
 	}
+
+	slog.Default().Debug("Pushing word status updates", "count", len(words))
 
 	payload := migakuSyncPayload{
 		Decks:             []any{},
@@ -244,6 +257,8 @@ func (s *MigakuSession) PushSync(ctx context.Context, words []map[string]any) er
 	if status != http.StatusOK {
 		return fmt.Errorf("push failed (%d): %s", status, string(respBody))
 	}
+
+	slog.Default().Debug("Push sync completed", "status", status)
 	return nil
 }
 
@@ -265,6 +280,8 @@ func (s *MigakuSession) doAuthorizedJSONRequest(ctx context.Context, method, url
 		return respBody, status, nil
 	}
 
+	slog.Default().Debug("Auth token expired, refreshing")
+
 	authToken, err = s.auth.refresh(ctx)
 	if err != nil {
 		return respBody, status, err
@@ -280,6 +297,7 @@ func doJSONRequest(
 	payload any,
 	headers map[string]string,
 ) ([]byte, int, error) {
+	start := time.Now()
 	var body io.Reader
 	if payload != nil {
 		b, err := json.Marshal(payload)
@@ -302,6 +320,7 @@ func doJSONRequest(
 
 	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
+		slog.Default().Debug("HTTP request failed", "method", method, "url", url, "error", err)
 		return nil, 0, err
 	}
 	defer resp.Body.Close()
@@ -310,6 +329,14 @@ func doJSONRequest(
 	if err != nil {
 		return nil, 0, err
 	}
+
+	slog.Default().Debug(
+		"HTTP request completed",
+		"method", method,
+		"url", url,
+		"status", resp.StatusCode,
+		"duration_ms", time.Since(start).Milliseconds(),
+	)
 
 	return respBody, resp.StatusCode, nil
 }

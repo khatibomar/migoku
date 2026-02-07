@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,8 +25,7 @@ type MigakuClient struct {
 	key     string
 
 	lastRefresh time.Time
-	refreshMu   sync.Mutex
-	dbUseMu     sync.RWMutex
+	refreshTTL  time.Duration
 }
 
 // NewMigakuClient initializes an API session and downloads the Migaku SRS database.
@@ -34,6 +34,7 @@ func NewMigakuClient(
 	ctx context.Context,
 	logger *slog.Logger,
 	email, password string,
+	ttl time.Duration,
 ) (c *MigakuClient, err error) {
 	defer func() {
 		if err != nil && c != nil && c.cleanUp != nil {
@@ -49,10 +50,13 @@ func NewMigakuClient(
 		return nil, errors.New("login failed: invalid credentials")
 	}
 
+	logger.Debug("Auth token acquired")
+
 	session := NewMigakuSession(authToken)
 	c = &MigakuClient{
-		logger:  logger,
-		session: session,
+		logger:     logger,
+		session:    session,
+		refreshTTL: ttl,
 	}
 
 	dbDir := filepath.Join(os.TempDir(), "migoku-db")
@@ -61,9 +65,25 @@ func NewMigakuClient(
 		return nil, err
 	}
 
+	go func(ctx context.Context) {
+		ticker := time.NewTicker(ttl)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := c.refreshDBIfStale(ctx, ttl); err != nil {
+					c.logger.Error("failed to refresh db", "error", err)
+				}
+			}
+		}
+	}(ctx)
+
 	key := hashProfileDirKey(email)
 	c.key = key
 	c.dbPath = filepath.Join(dbDir, "migaku-"+key+".db")
+	c.logger.Debug("Using local db path", "path", c.dbPath)
 	if err = c.refreshDB(ctx); err != nil {
 		return nil, err
 	}
@@ -77,14 +97,14 @@ func NewMigakuClient(
 }
 
 func (c *MigakuClient) refreshDB(ctx context.Context) error {
-	c.refreshMu.Lock()
-	defer c.refreshMu.Unlock()
-
-	c.dbUseMu.Lock()
-	defer c.dbUseMu.Unlock()
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.refreshDBLocked(ctx)
+}
+
+func (c *MigakuClient) refreshDBLocked(ctx context.Context) error {
+	start := time.Now()
+	c.logger.Debug("Refreshing local database")
 
 	if c.session == nil {
 		return errors.New("missing migaku session")
@@ -94,6 +114,7 @@ func (c *MigakuClient) refreshDB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	c.logger.Debug("Downloaded database", "bytes", len(data))
 
 	tmpPath := c.dbPath + ".tmp"
 	if err := os.WriteFile(tmpPath, data, 0o600); err != nil {
@@ -116,19 +137,23 @@ func (c *MigakuClient) refreshDB(ctx context.Context) error {
 	db.SetMaxIdleConns(1)
 	c.db = db
 	c.lastRefresh = time.Now()
+	c.logger.Debug("Local database refreshed", "duration_ms", time.Since(start).Milliseconds())
 	return nil
 }
 
 func (c *MigakuClient) refreshDBIfStale(ctx context.Context, ttl time.Duration) error {
 	if ttl <= 0 {
+		c.logger.Debug("Skipping db refresh; ttl disabled")
 		return nil
 	}
 	buffer := 2 * time.Second
 	threshold := max(ttl-buffer, 0)
 
 	if !c.isRefreshStale(threshold) {
+		c.logger.Debug("Skipping db refresh; not stale", "ttl", ttl.String())
 		return nil
 	}
+	c.logger.Debug("Db refresh required", "ttl", ttl.String())
 
 	return c.refreshDB(ctx)
 }
@@ -140,22 +165,13 @@ func (c *MigakuClient) isRefreshStale(threshold time.Duration) bool {
 	return time.Since(last) >= threshold
 }
 
-func (c *MigakuClient) ensureDB(ctx context.Context) (*sqlx.DB, error) {
-	c.mu.RLock()
-	if c.db != nil {
-		db := c.db
-		c.mu.RUnlock()
-		return db, nil
-	}
-	c.mu.RUnlock()
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (c *MigakuClient) ensureDBLocked(ctx context.Context) (*sqlx.DB, error) {
 	if c.db != nil {
 		return c.db, nil
 	}
 
 	if _, err := os.Stat(c.dbPath); err == nil {
+		c.logger.Debug("Opening existing db file", "path", c.dbPath)
 		db, err := sqlx.Open("sqlite", c.dbPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open sqlite db: %w", err)
@@ -166,7 +182,8 @@ func (c *MigakuClient) ensureDB(ctx context.Context) (*sqlx.DB, error) {
 		return c.db, nil
 	}
 
-	if err := c.refreshDB(ctx); err != nil {
+	c.logger.Debug("Db file missing; downloading fresh db")
+	if err := c.refreshDBLocked(ctx); err != nil {
 		return nil, err
 	}
 	return c.db, nil
@@ -194,4 +211,107 @@ func hashProfileDirKey(email string) string {
 		hash = int(r) + ((hash << 5) - hash)
 	}
 	return fmt.Sprintf("%x", hash)
+}
+
+func runQuery[T any](ctx context.Context, client *MigakuClient, query string, params ...any) ([]T, error) {
+	if client == nil {
+		return nil, errors.New("missing authenticated session")
+	}
+	return runReadQuery[T](ctx, client, query, params...)
+}
+
+func runReadQuery[T any](ctx context.Context, client *MigakuClient, query string, params ...any) ([]T, error) {
+	if client == nil {
+		return nil, errors.New("missing authenticated session")
+	}
+
+	client.logger.Info("Running read query", "query", query, "params", params)
+
+	client.mu.RLock()
+	if client.db != nil {
+		db := client.db
+		defer client.mu.RUnlock()
+		var result []T
+		if err := db.SelectContext(ctx, &result, query, params...); err != nil {
+			client.logger.Error("Read query failed", "error", err)
+			return nil, fmt.Errorf("failed to execute read query: %w", err)
+		}
+		client.logger.Info("Read query completed", "rows", len(result))
+		return result, nil
+	}
+	client.mu.RUnlock()
+
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	db, err := client.ensureDBLocked(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []T
+	if err := db.SelectContext(ctx, &result, query, params...); err != nil {
+		client.logger.Error("Read query failed", "error", err)
+		return nil, fmt.Errorf("failed to execute read query: %w", err)
+	}
+
+	client.logger.Info("Read query completed", "rows", len(result))
+	return result, nil
+}
+
+func runReadRow(ctx context.Context, client *MigakuClient, query string, params ...any) (map[string]any, error) {
+	if client == nil {
+		return nil, errors.New("missing authenticated session")
+	}
+
+	client.logger.Info("Running read row query", "query", query, "params", params)
+
+	client.mu.RLock()
+	if client.db != nil {
+		db := client.db
+		defer client.mu.RUnlock()
+		row := db.QueryRowxContext(ctx, query, params...)
+		raw := map[string]any{}
+		if err := row.MapScan(raw); err != nil {
+			return nil, err
+		}
+		return raw, nil
+	}
+	client.mu.RUnlock()
+
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	db, err := client.ensureDBLocked(ctx)
+	if err != nil {
+		return nil, err
+	}
+	row := db.QueryRowxContext(ctx, query, params...)
+	raw := map[string]any{}
+	if err := row.MapScan(raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+func runWriteQuery(ctx context.Context, client *MigakuClient, query string, params ...any) (sql.Result, error) {
+	if client == nil {
+		return nil, errors.New("missing authenticated session")
+	}
+
+	client.mu.Lock()
+	defer client.mu.Unlock()
+
+	client.logger.Info("Running write query", "query", query, "params", params)
+
+	db, err := client.ensureDBLocked(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := db.ExecContext(ctx, query, params...)
+	if err != nil {
+		client.logger.Error("Write query failed", "error", err)
+		return nil, fmt.Errorf("failed to execute write query: %w", err)
+	}
+
+	return result, nil
 }

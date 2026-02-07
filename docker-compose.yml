@@ -7,7 +7,7 @@ services:
         - LOG_LEVEL=${LOG_LEVEL:-info}
         - PORT=${PORT:-8080}
         - CORS_ORIGINS=${CORS_ORIGINS:-*}
-        - CACHE_TTL=${CACHE_TTL:-5m}
+        - CACHE_TTL=${CACHE_TTL:-10s}
     container_name: migoku
     ports:
       - "${PORT:-8080}:${PORT:-8080}"

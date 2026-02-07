@@ -8,8 +8,6 @@ import (
 	"log/slog"
 	"strings"
 	"time"
-
-	"github.com/jmoiron/sqlx"
 )
 
 type WordStatusResult struct {
@@ -141,11 +139,6 @@ func (s *MigakuService) setWordStatusItems(
 		})
 	}
 
-	db, err := client.ensureDB(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	results := make([]WordStatusItemResult, 0, len(normalizedItems))
 	updates := make([]map[string]any, 0, len(normalizedItems))
 	updateRecords := make([]wordRecord, 0, len(normalizedItems))
@@ -156,7 +149,7 @@ func (s *MigakuService) setWordStatusItems(
 	}
 
 	for _, item := range normalizedItems {
-		record, payload, recErr := lookupWordRecord(ctx, db, item.WordText, item.Secondary, language)
+		record, payload, recErr := lookupWordRecord(ctx, client, item.WordText, item.Secondary, language)
 		if recErr != nil {
 			results = append(results, WordStatusItemResult{
 				WordText:  item.WordText,
@@ -211,7 +204,11 @@ func (s *MigakuService) setWordStatusItems(
 	return &WordStatusResult{Ok: true, Results: results}, nil
 }
 
-func lookupWordRecord(ctx context.Context, db *sqlx.DB, wordText, secondary, language string) (wordRecord, map[string]any, error) {
+func lookupWordRecord(
+	ctx context.Context,
+	client *MigakuClient,
+	wordText, secondary, language string,
+) (wordRecord, map[string]any, error) {
 	query := `SELECT dictForm, secondary, partOfSpeech, language, serverMod, knownStatus, hasCard, tracked,
 created, del, isModern, serverVersion, isPendingEnqueue, isPendingApply
 FROM WordList
@@ -229,9 +226,8 @@ WHERE del = 0 AND dictForm = ?`
 	}
 	query += " LIMIT 1;"
 
-	row := db.QueryRowxContext(ctx, query, params...)
-	raw := map[string]any{}
-	if err := row.MapScan(raw); err != nil {
+	raw, err := runReadRow(ctx, client, query, params...)
+	if err != nil {
 		return wordRecord{}, nil, fmt.Errorf("word not found: %w", err)
 	}
 
@@ -347,33 +343,18 @@ func updateLocalWordStatus(
 		return nil
 	}
 
-	client.dbUseMu.RLock()
-	defer client.dbUseMu.RUnlock()
-
-	db, err := client.ensureDB(ctx)
-	if err != nil {
-		return err
-	}
-
 	query := `UPDATE WordList
 SET knownStatus = ?, tracked = ?, mod = ?
 WHERE dictForm = ? AND secondary = ? AND partOfSpeech = ? AND language = ?;`
-
-	tx, err := db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
 
 	for _, record := range records {
 		dictForm, secondary, partOfSpeech, language, err := requireRecordKeys(record)
 		if err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(
+		if _, err := runWriteQuery(
 			ctx,
+			client,
 			query,
 			update.KnownStatus,
 			update.Tracked,
@@ -386,8 +367,7 @@ WHERE dictForm = ? AND secondary = ? AND partOfSpeech = ? AND language = ?;`
 			return err
 		}
 	}
-
-	return tx.Commit()
+	return nil
 }
 
 func requireRecordKeys(record wordRecord) (string, string, string, string, error) {
