@@ -7,14 +7,14 @@ import (
 
 // wordRow represents a word row from the WordList table
 type wordRow struct {
-	DictForm    string `db:"dictForm" json:"dictForm"`
-	Secondary   string `db:"secondary" json:"secondary"`
+	DictForm    string `db:"dictForm"    json:"dictForm"`
+	Secondary   string `db:"secondary"   json:"secondary"`
 	KnownStatus string `db:"knownStatus" json:"knownStatus,omitempty"`
 }
 
 // deckRow represents a deck row from the deck table
 type deckRow struct {
-	ID   int    `db:"id" json:"id"`
+	ID   int    `db:"id"   json:"id"`
 	Name string `db:"name" json:"name"`
 }
 
@@ -26,7 +26,7 @@ type tableRow struct {
 // statusCountRow represents a single row from the GROUP BY query
 type statusCountRow struct {
 	Status string `db:"status" json:"status"`
-	Count  int    `db:"count" json:"count"`
+	Count  int    `db:"count"  json:"count"`
 }
 
 const deckIDClause = " AND c.deckId = ?"
@@ -123,13 +123,13 @@ func (r *Repository) GetTables(ctx context.Context, client *MigakuClient) ([]tab
 
 // difficultWordRow represents words with high fail rates
 type difficultWordRow struct {
-	DictForm      string  `db:"dictForm" json:"dictForm"`
-	Secondary     string  `db:"secondary" json:"secondary"`
-	PartOfSpeech  string  `db:"partOfSpeech" json:"partOfSpeech"`
-	KnownStatus   string  `db:"knownStatus" json:"knownStatus"`
+	DictForm      string  `db:"dictForm"      json:"dictForm"`
+	Secondary     string  `db:"secondary"     json:"secondary"`
+	PartOfSpeech  string  `db:"partOfSpeech"  json:"partOfSpeech"`
+	KnownStatus   string  `db:"knownStatus"   json:"knownStatus"`
 	TotalReviews  int     `db:"total_reviews" json:"total_reviews"`
 	FailedReviews int     `db:"failed_reviews" json:"failed_reviews"`
-	FailRate      float64 `db:"fail_rate" json:"fail_rate"`
+	FailRate      float64 `db:"fail_rate"     json:"fail_rate"`
 }
 
 // GetDifficultWords retrieves words with highest fail rates (min 5 reviews)
@@ -180,11 +180,11 @@ func (r *Repository) GetDifficultWords(
 
 // schemaRow represents database schema information
 type schemaRow struct {
-	TableName    string `db:"table_name" json:"table_name"`
+	TableName    string `db:"table_name"  json:"table_name"`
 	ColumnName   string `db:"column_name" json:"column_name"`
 	ColumnType   string `db:"column_type" json:"column_type"`
 	IsNotNull    int    `db:"is_not_null" json:"is_not_null"`
-	IsPrimaryKey int    `db:"is_pk" json:"is_pk"`
+	IsPrimaryKey int    `db:"is_pk"       json:"is_pk"`
 }
 
 // GetDatabaseSchema retrieves the database schema from sqlite_master

@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	//nolint:gosec // Public API key used by Migaku clients.
 	migakuAPIKey              = "AIzaSyDZvwYKYTsQoZkf3oKsfIQ4ykuy2GZAiH8"
 	migakuSyncServerURL       = "https://core-server-mohegkboza-uc.a.run.app"
 	migakuPresignedURLService = "https://srs-db-presigned-url-service-api.migaku.com/db-force-sync-download-url"

@@ -31,6 +31,7 @@ type MigakuClient struct {
 // NewMigakuClient initializes an API session and downloads the Migaku SRS database.
 // It returns an error if login fails or if the database cannot be fetched.
 func NewMigakuClient(
+	ctx context.Context,
 	logger *slog.Logger,
 	email, password string,
 ) (c *MigakuClient, err error) {
@@ -40,7 +41,7 @@ func NewMigakuClient(
 		}
 	}()
 
-	authToken, err := TryFromEmailPassword(context.Background(), email, password)
+	authToken, err := TryFromEmailPassword(ctx, email, password)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +64,7 @@ func NewMigakuClient(
 	key := hashProfileDirKey(email)
 	c.key = key
 	c.dbPath = filepath.Join(dbDir, "migaku-"+key+".db")
-	if err = c.refreshDB(context.Background()); err != nil {
+	if err = c.refreshDB(ctx); err != nil {
 		return nil, err
 	}
 
@@ -123,10 +124,7 @@ func (c *MigakuClient) refreshDBIfStale(ctx context.Context, ttl time.Duration) 
 		return nil
 	}
 	buffer := 2 * time.Second
-	threshold := ttl - buffer
-	if threshold < 0 {
-		threshold = 0
-	}
+	threshold := max(ttl-buffer, 0)
 
 	if !c.isRefreshStale(threshold) {
 		return nil

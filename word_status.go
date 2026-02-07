@@ -52,6 +52,8 @@ type wordStatusUpdate struct {
 	Tracked     bool
 }
 
+const languageFilterClause = " AND language = ?"
+
 func statusToUpdate(status string) (wordStatusUpdate, bool) {
 	normalized := strings.ToLower(strings.TrimSpace(status))
 	switch normalized {
@@ -210,12 +212,13 @@ func (s *MigakuService) setWordStatusItems(
 }
 
 func lookupWordRecord(ctx context.Context, db *sqlx.DB, wordText, secondary, language string) (wordRecord, map[string]any, error) {
-	query := `SELECT *
+	query := `SELECT dictForm, secondary, partOfSpeech, language, serverMod, knownStatus, hasCard, tracked,
+created, del, isModern, serverVersion, isPendingEnqueue, isPendingApply
 FROM WordList
 WHERE del = 0 AND dictForm = ?`
 	params := []any{wordText}
 	if strings.TrimSpace(language) != "" {
-		query += " AND language = ?"
+		query += languageFilterClause
 		params = append(params, language)
 	}
 	if strings.TrimSpace(secondary) != "" {
@@ -331,13 +334,6 @@ func getNullBool(row map[string]any, key string) sql.NullBool {
 	default:
 		return sql.NullBool{}
 	}
-}
-
-func boolToInt(value bool) int64 {
-	if value {
-		return 1
-	}
-	return 0
 }
 
 func updateLocalWordStatus(

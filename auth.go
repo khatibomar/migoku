@@ -83,7 +83,7 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, err := NewMigakuClient(app.logger, email, password)
+	db, err := NewMigakuClient(r.Context(), app.logger, email, password)
 	if err != nil {
 		app.logger.Error("Failed to initialize client", "error", err)
 		app.writeJSONError(w, r, http.StatusInternalServerError, "Failed to initialize client")

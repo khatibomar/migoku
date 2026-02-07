@@ -437,10 +437,10 @@ func (s *MigakuService) GetWordStats(ctx context.Context, client *MigakuClient, 
 	}
 
 	type wordStatsRow struct {
-		KnownCount    int `db:"known_count" json:"known_count"`
+		KnownCount    int `db:"known_count"    json:"known_count"`
 		LearningCount int `db:"learning_count" json:"learning_count"`
-		UnknownCount  int `db:"unknown_count" json:"unknown_count"`
-		IgnoredCount  int `db:"ignored_count" json:"ignored_count"`
+		UnknownCount  int `db:"unknown_count"  json:"unknown_count"`
+		IgnoredCount  int `db:"ignored_count"  json:"ignored_count"`
 	}
 
 	rows, err := runQuery[wordStatsRow](ctx, client, query, params...)
@@ -547,9 +547,9 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 	actualForecastDays := endDayNumber - currentDayNumber + 1
 
 	type dueRow struct {
-		Due           int    `db:"due" json:"due"`
+		Due           int    `db:"due"            json:"due"`
 		IntervalRange string `db:"interval_range" json:"interval_range"`
-		Count         int    `db:"count" json:"count"`
+		Count         int    `db:"count"          json:"count"`
 	}
 
 	query := `
@@ -652,7 +652,7 @@ func (s *MigakuService) GetIntervalStats(
 
 	type intervalRow struct {
 		IntervalGroup float64 `db:"interval_group" json:"interval_group"`
-		Count         int     `db:"count" json:"count"`
+		Count         int     `db:"count"          json:"count"`
 	}
 
 	query := `
@@ -741,7 +741,11 @@ func (s *MigakuService) GetIntervalStats(
 	return stats, nil
 }
 
-func (s *MigakuService) GetStudyStats(ctx context.Context, client *MigakuClient, lang, deckID, periodID string) (*StudyStats, error) {
+func (s *MigakuService) GetStudyStats(
+	ctx context.Context,
+	client *MigakuClient,
+	lang, deckID, periodID string,
+) (*StudyStats, error) {
 	if lang == "" {
 		return nil, errors.New("lang parameter is required")
 	}
@@ -946,13 +950,13 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type IN (1, 2)`
 	}
 
 	type studyRow struct {
-		DaysStudied  int `db:"days_studied" json:"days_studied"`
+		DaysStudied  int `db:"days_studied"  json:"days_studied"`
 		TotalReviews int `db:"total_reviews" json:"total_reviews"`
 	}
 
 	type passRateRow struct {
 		SuccessfulReviews int `db:"successful_reviews" json:"successful_reviews"`
-		FailedReviews     int `db:"failed_reviews" json:"failed_reviews"`
+		FailedReviews     int `db:"failed_reviews"     json:"failed_reviews"`
 	}
 
 	type newCardsRow struct {
@@ -977,8 +981,8 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type IN (1, 2)`
 
 	type timeRow struct {
 		TotalTimeSeconds int     `db:"total_time_seconds" json:"total_time_seconds"`
-		ReviewCount      int     `db:"review_count" json:"review_count"`
-		AvgTimeSeconds   float64 `db:"avg_time_seconds" json:"avg_time_seconds"`
+		ReviewCount      int     `db:"review_count"       json:"review_count"`
+		AvgTimeSeconds   float64 `db:"avg_time_seconds"   json:"avg_time_seconds"`
 	}
 
 	studyResults, err := runQuery[studyRow](ctx, client, studyQuery, studyParams...)
