@@ -21,7 +21,6 @@ So that's why I built this project as a way to have an API that we can build coo
 ## Prerequisites
 
 - Go
-- Chrome/Chromium browser
 
 ## Quick Start
 
@@ -43,12 +42,10 @@ OpenAPI spec is available at `/openapi.yaml`.
 
 Environment variables:
 - `PORT` - Server port (default: 8080)
-- `HEADLESS` - Run browser headless (default: true, set to "false" for visible)
 - `CORS_ORIGINS` - Allowed CORS origins (comma-separated, default: "*")
 - `API_SECRET` - Secret used to sign keys ( in case of comprimised key, change this and will generate new keys)
 - `CACHE_TTL` - Cache duration (default: 5m)
 - `LOG_LEVEL` - Log level: DEBUG, INFO, WARN, ERROR (default: INFO)
-- `TARGET_LANG` - Optional language selection when Migaku prompts (use language code like `ja` or name like `Japanese`)
 
 ## Development
 

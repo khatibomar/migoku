@@ -4,7 +4,6 @@ services:
       context: .
       args:
         - API_SECRET=${API_SECRET:-top-secret}
-        - HEADLESS=${HEADLESS:-true}
         - LOG_LEVEL=${LOG_LEVEL:-info}
         - PORT=${PORT:-8080}
         - CORS_ORIGINS=${CORS_ORIGINS:-*}

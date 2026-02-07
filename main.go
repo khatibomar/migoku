@@ -15,17 +15,14 @@ import (
 )
 
 type Application struct {
-	logger  *slog.Logger
-	cache   *Cache
-	service *MigakuService
+	logger    *slog.Logger
+	cache     *Cache
+	service   *MigakuService
+	port      int
+	cors      []string
+	secretKey string
 
-	headless      bool
-	port          int
-	loginWaitTime time.Duration
-	cors          []string
-	secretKey     string
-
-	accounts map[string]*Browser
+	accounts map[string]*MigakuClient
 }
 
 var _, longVersion, _ = FromBuildInfo()
@@ -48,7 +45,6 @@ func main() {
 }
 
 func realMain(logger *slog.Logger) error {
-	headless := os.Getenv("HEADLESS") != "false"
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -86,23 +82,21 @@ func realMain(logger *slog.Logger) error {
 		return errors.New("API_SECRET environment variable is required")
 	}
 
-	logger.Info("Initializing browser and logging in...")
+	logger.Info("Initializing client session...")
 
 	app := &Application{
-		headless:      headless,
-		port:          portInt,
-		loginWaitTime: 30 * time.Second,
-		cors:          cors,
-		cache:         cache,
-		logger:        logger,
-		secretKey:     secretKey,
-		accounts:      make(map[string]*Browser),
+		port:      portInt,
+		cors:      cors,
+		cache:     cache,
+		logger:    logger,
+		secretKey: secretKey,
+		accounts:  make(map[string]*MigakuClient),
 	}
 
 	repo := NewRepository()
 	app.service = NewMigakuService(repo, cache)
 
-	logger.Info("Login complete, browser ready for queries")
+	logger.Info("Login complete, client ready for queries")
 
 	//--- Start HTTP server ---
 	chainMiddlewares := func(handler http.HandlerFunc, middlewares ...func(http.HandlerFunc) http.HandlerFunc) http.HandlerFunc {
@@ -168,9 +162,9 @@ func realMain(logger *slog.Logger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	for _, browser := range app.accounts {
-		if browser != nil {
-			browser.Close()
+	for _, client := range app.accounts {
+		if client != nil {
+			client.Close()
 		}
 	}
 

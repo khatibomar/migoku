@@ -3,7 +3,7 @@ info:
   title: Migoku API
   version: beta
   description: |
-    REST API for accessing Migaku local data via browser automation and caching.
+    REST API for accessing Migaku local data via API sync and caching.
     Most endpoints require `X-Api-Key` once authentication is enabled.
 servers:
   - url: http://localhost:8080
@@ -56,7 +56,7 @@ paths:
   /auth/logout:
     post:
       tags: [Auth]
-      summary: Logout and close the browser session
+      summary: Logout and close the client session
       security:
         - ApiKeyAuth: []
       responses:
@@ -129,9 +129,11 @@ paths:
                   status: known
                   wordText: "僕"
                   secondary: "ぼく"
+                  language: ja
               batch:
                 value:
                   status: learning
+                  language: ja
                   items:
                     - wordText: "本"
                       secondary: "ほん"
@@ -454,6 +456,9 @@ components:
         status:
           type: string
           enum: [known, learning, tracked, ignored]
+        language:
+          type: string
+          description: Optional language code override (e.g. ja, en). If omitted, the login language is used.
         wordText:
           type: string
         secondary:
@@ -586,8 +591,6 @@ components:
           type: string
         cache_ttl:
           type: string
-        headless:
-          type: boolean
     Table:
       type: object
       properties:

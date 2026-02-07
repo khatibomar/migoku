@@ -12,16 +12,16 @@ import (
 	"strings"
 )
 
-type browserContextKey int
+type clientContextKey int
 
-const requestBrowserKey browserContextKey = iota
+const requestClientKey clientContextKey = iota
 
-func browserFromContext(ctx context.Context) (*Browser, bool) {
-	browser, ok := ctx.Value(requestBrowserKey).(*Browser)
-	if !ok || browser == nil {
+func clientFromContext(ctx context.Context) (*MigakuClient, bool) {
+	client, ok := ctx.Value(requestClientKey).(*MigakuClient)
+	if !ok || client == nil {
 		return nil, false
 	}
-	return browser, true
+	return client, true
 }
 
 func (app *Application) deriveAPIKey(email, password, language string) (string, error) {
@@ -83,14 +83,14 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	browser, err := NewBrowser(app.logger, email, password, language, app.headless)
+	db, err := NewMigakuClient(app.logger, email, password)
 	if err != nil {
-		app.logger.Error("Failed to initialize browser", "error", err)
-		app.writeJSONError(w, r, http.StatusInternalServerError, "Failed to initialize browser")
+		app.logger.Error("Failed to initialize client", "error", err)
+		app.writeJSONError(w, r, http.StatusInternalServerError, "Failed to initialize client")
 		return
 	}
 
-	app.accounts[apiKey] = browser
+	app.accounts[apiKey] = db
 	if err := encode(w, r, http.StatusOK, map[string]string{
 		"api_key": apiKey,
 		"message": "Login successful",
@@ -111,14 +111,14 @@ func (app *Application) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	browser, exists := app.accounts[apiKey]
-	if !exists || browser == nil {
+	db, exists := app.accounts[apiKey]
+	if !exists || db == nil {
 		app.writeJSONError(w, r, http.StatusUnauthorized, "Not logged in")
 		return
 	}
 
-	if browser.cleanUp != nil {
-		browser.cleanUp()
+	if db.cleanUp != nil {
+		db.cleanUp()
 	}
 
 	delete(app.accounts, apiKey)
@@ -137,13 +137,13 @@ func (app *Application) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		browser, exists := app.accounts[apiKey]
-		if !exists || browser == nil {
+		client, exists := app.accounts[apiKey]
+		if !exists || client == nil {
 			app.writeJSONError(w, r, http.StatusUnauthorized, "Invalid or expired API key")
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), requestBrowserKey, browser)
+		ctx := context.WithValue(r.Context(), requestClientKey, client)
 		next(w, r.WithContext(ctx))
 	}
 }
