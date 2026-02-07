@@ -26,10 +26,14 @@ type MigakuClient struct {
 
 	lastRefresh time.Time
 	refreshTTL  time.Duration
+	refreshWg   sync.WaitGroup
+	refreshStop context.CancelFunc
 }
 
 // NewMigakuClient initializes an API session and downloads the Migaku SRS database.
 // It returns an error if login fails or if the database cannot be fetched.
+//
+//nolint:contextcheck // background refresh loop not tied to request context
 func NewMigakuClient(
 	ctx context.Context,
 	logger *slog.Logger,
@@ -37,8 +41,8 @@ func NewMigakuClient(
 	ttl time.Duration,
 ) (c *MigakuClient, err error) {
 	defer func() {
-		if err != nil && c != nil && c.cleanUp != nil {
-			c.cleanUp()
+		if err != nil && c != nil {
+			c.Close()
 		}
 	}()
 
@@ -65,27 +69,32 @@ func NewMigakuClient(
 		return nil, err
 	}
 
-	go func(ctx context.Context) {
-		ticker := time.NewTicker(ttl)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if err := c.refreshDBIfStale(ctx, ttl); err != nil {
-					c.logger.Error("failed to refresh db", "error", err)
-				}
-			}
-		}
-	}(ctx)
-
 	key := hashProfileDirKey(email)
 	c.key = key
 	c.dbPath = filepath.Join(dbDir, "migaku-"+key+".db")
 	c.logger.Debug("Using local db path", "path", c.dbPath)
 	if err = c.refreshDB(ctx); err != nil {
 		return nil, err
+	}
+
+	if ttl > 0 {
+		refreshCtx, refreshStop := context.WithCancel(context.Background())
+		c.refreshStop = refreshStop
+		c.refreshWg.Go(func() {
+			ticker := time.NewTicker(ttl)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					if err := c.refreshDBIfStale(refreshCtx, ttl); err != nil {
+						c.logger.Error("failed to refresh db", "error", err)
+					}
+				case <-refreshCtx.Done():
+					c.logger.Debug("Stopping refresh loop")
+					return
+				}
+			}
+		})
 	}
 
 	c.cleanUp = func() {
@@ -199,6 +208,11 @@ func (c *MigakuClient) closeDB() {
 }
 
 func (c *MigakuClient) Close() {
+	if c.refreshStop != nil {
+		c.refreshStop()
+		c.refreshStop = nil
+	}
+	c.refreshWg.Wait()
 	if c.cleanUp != nil {
 		c.cleanUp()
 	}
