@@ -10,13 +10,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o migoku .
 #### Runtime stage
 FROM alpine:latest
 
-RUN apk add --no-cache \
-    chromium \
-    chromium-chromedriver \
-    ca-certificates \
-    tzdata \
-    && rm -rf /var/cache/apk/*
-
 # Create non-root user
 RUN addgroup -g 1000 app && \
     adduser -D -u 1000 -G app app
@@ -26,23 +19,13 @@ WORKDIR /app
 COPY --from=builder /app/migoku .
 COPY --from=builder /app/example ./example
 
-ENV CHROME_BIN=/usr/bin/chromium-browser \
-    CHROME_PATH=/usr/lib/chromium/ \
-    CHROMIUM_FLAGS="--disable-software-rasterizer --disable-dev-shm-usage"
-
-ARG EMAIL
-ARG PASSWORD
-ARG HEADLESS=true
 ARG LOG_LEVEL=info
 ARG PORT=8080
 ARG API_SECRET
 ARG CORS_ORIGINS
 ARG CACHE_TTL
 
-ENV EMAIL=${EMAIL} \
-    PASSWORD=${PASSWORD} \
-    HEADLESS=${HEADLESS} \
-    LOG_LEVEL=${LOG_LEVEL} \
+ENV LOG_LEVEL=${LOG_LEVEL} \
     PORT=${PORT} \
     API_SECRET=${API_SECRET} \
     CORS_ORIGINS=${CORS_ORIGINS} \

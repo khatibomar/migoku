@@ -7,26 +7,26 @@ import (
 
 // wordRow represents a word row from the WordList table
 type wordRow struct {
-	DictForm    string `json:"dictForm"`
-	Secondary   string `json:"secondary"`
-	KnownStatus string `json:"knownStatus,omitempty"`
+	DictForm    string `db:"dictForm"    json:"dictForm"`
+	Secondary   string `db:"secondary"   json:"secondary"`
+	KnownStatus string `db:"knownStatus" json:"knownStatus,omitempty"`
 }
 
 // deckRow represents a deck row from the deck table
 type deckRow struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID   int    `db:"id"   json:"id"`
+	Name string `db:"name" json:"name"`
 }
 
 // tableRow represents a table name from sqlite_master
 type tableRow struct {
-	Name string `json:"name"`
+	Name string `db:"name" json:"name"`
 }
 
 // statusCountRow represents a single row from the GROUP BY query
 type statusCountRow struct {
-	Status string `json:"status"`
-	Count  int    `json:"count"`
+	Status string `db:"status" json:"status"`
+	Count  int    `db:"count"  json:"count"`
 }
 
 const deckIDClause = " AND c.deckId = ?"
@@ -42,7 +42,7 @@ func NewRepository() *Repository {
 // GetWords retrieves words from WordList with optional filters
 // status can be empty for all words, or "KNOWN", "LEARNING", etc.
 // limit can be 0 for no limit
-func (r *Repository) GetWords(ctx context.Context, browser *Browser, lang, status string, limit int) ([]wordRow, error) {
+func (r *Repository) GetWords(ctx context.Context, client *MigakuClient, lang, status string, limit int) ([]wordRow, error) {
 	var query string
 	var params []any
 
@@ -65,7 +65,7 @@ func (r *Repository) GetWords(ctx context.Context, browser *Browser, lang, statu
 
 	query += ";"
 
-	words, err := runQuery[wordRow](ctx, browser, query, params...)
+	words, err := runQuery[wordRow](ctx, client, query, params...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get words: %w", err)
 	}
@@ -74,9 +74,9 @@ func (r *Repository) GetWords(ctx context.Context, browser *Browser, lang, statu
 }
 
 // GetDecks retrieves all active decks
-func (r *Repository) GetDecks(ctx context.Context, browser *Browser) ([]deckRow, error) {
+func (r *Repository) GetDecks(ctx context.Context, client *MigakuClient) ([]deckRow, error) {
 	query := "SELECT id, name FROM deck WHERE del = 0 ORDER BY name;"
-	decks, err := runQuery[deckRow](ctx, browser, query)
+	decks, err := runQuery[deckRow](ctx, client, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get decks: %w", err)
 	}
@@ -85,7 +85,7 @@ func (r *Repository) GetDecks(ctx context.Context, browser *Browser) ([]deckRow,
 }
 
 // GetStatusCounts retrieves status counts with optional filters
-func (r *Repository) GetStatusCounts(ctx context.Context, browser *Browser, lang, deckID string) ([]statusCountRow, error) {
+func (r *Repository) GetStatusCounts(ctx context.Context, client *MigakuClient, lang, deckID string) ([]statusCountRow, error) {
 	var params []any
 
 	query := "SELECT knownStatus as status, count(1) as count FROM WordList WHERE del = 0"
@@ -102,7 +102,7 @@ func (r *Repository) GetStatusCounts(ctx context.Context, browser *Browser, lang
 
 	query += " GROUP BY knownStatus;"
 
-	rows, err := runQuery[statusCountRow](ctx, browser, query, params...)
+	rows, err := runQuery[statusCountRow](ctx, client, query, params...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get status counts: %w", err)
 	}
@@ -111,9 +111,9 @@ func (r *Repository) GetStatusCounts(ctx context.Context, browser *Browser, lang
 }
 
 // GetTables retrieves all database tables
-func (r *Repository) GetTables(ctx context.Context, browser *Browser) ([]tableRow, error) {
+func (r *Repository) GetTables(ctx context.Context, client *MigakuClient) ([]tableRow, error) {
 	query := "SELECT name FROM sqlite_master WHERE type='table';"
-	tables, err := runQuery[tableRow](ctx, browser, query)
+	tables, err := runQuery[tableRow](ctx, client, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tables: %w", err)
 	}
@@ -123,19 +123,19 @@ func (r *Repository) GetTables(ctx context.Context, browser *Browser) ([]tableRo
 
 // difficultWordRow represents words with high fail rates
 type difficultWordRow struct {
-	DictForm      string  `json:"dictForm"`
-	Secondary     string  `json:"secondary"`
-	PartOfSpeech  string  `json:"partOfSpeech"`
-	KnownStatus   string  `json:"knownStatus"`
-	TotalReviews  int     `json:"total_reviews"`
-	FailedReviews int     `json:"failed_reviews"`
-	FailRate      float64 `json:"fail_rate"`
+	DictForm      string  `db:"dictForm"       json:"dictForm"`
+	Secondary     string  `db:"secondary"      json:"secondary"`
+	PartOfSpeech  string  `db:"partOfSpeech"   json:"partOfSpeech"`
+	KnownStatus   string  `db:"knownStatus"    json:"knownStatus"`
+	TotalReviews  int     `db:"total_reviews"  json:"total_reviews"`
+	FailedReviews int     `db:"failed_reviews" json:"failed_reviews"`
+	FailRate      float64 `db:"fail_rate"      json:"fail_rate"`
 }
 
 // GetDifficultWords retrieves words with highest fail rates (min 5 reviews)
 func (r *Repository) GetDifficultWords(
 	ctx context.Context,
-	browser *Browser,
+	client *MigakuClient,
 	lang string,
 	limit int,
 	deckID string,
@@ -171,7 +171,7 @@ func (r *Repository) GetDifficultWords(
 
 	params = append(params, limit)
 
-	words, err := runQuery[difficultWordRow](ctx, browser, query, params...)
+	words, err := runQuery[difficultWordRow](ctx, client, query, params...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get difficult words: %w", err)
 	}
@@ -180,15 +180,15 @@ func (r *Repository) GetDifficultWords(
 
 // schemaRow represents database schema information
 type schemaRow struct {
-	TableName    string `json:"table_name"`
-	ColumnName   string `json:"column_name"`
-	ColumnType   string `json:"column_type"`
-	IsNotNull    int    `json:"is_not_null"`
-	IsPrimaryKey int    `json:"is_pk"`
+	TableName    string `db:"table_name"  json:"table_name"`
+	ColumnName   string `db:"column_name" json:"column_name"`
+	ColumnType   string `db:"column_type" json:"column_type"`
+	IsNotNull    int    `db:"is_not_null" json:"is_not_null"`
+	IsPrimaryKey int    `db:"is_pk"       json:"is_pk"`
 }
 
 // GetDatabaseSchema retrieves the database schema from sqlite_master
-func (r *Repository) GetDatabaseSchema(ctx context.Context, browser *Browser) ([]schemaRow, error) {
+func (r *Repository) GetDatabaseSchema(ctx context.Context, client *MigakuClient) ([]schemaRow, error) {
 	query := `SELECT
 	            m.name AS table_name,
 	            p.name AS column_name,
@@ -200,7 +200,7 @@ func (r *Repository) GetDatabaseSchema(ctx context.Context, browser *Browser) ([
 	          WHERE m.type = 'table'
 	          ORDER BY m.name, p.cid;`
 
-	schema, err := runQuery[schemaRow](ctx, browser, query)
+	schema, err := runQuery[schemaRow](ctx, client, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database schema: %w", err)
 	}

@@ -114,11 +114,11 @@ type MigakuService struct {
 	cache *Cache
 }
 
-func (s *MigakuService) scopedCacheKey(browser *Browser, key string) string {
-	if browser == nil || browser.key == "" {
+func (s *MigakuService) scopedCacheKey(client *MigakuClient, key string) string {
+	if client == nil || client.key == "" {
 		return key
 	}
-	return "browser:" + browser.key + ":" + key
+	return "client:" + client.key + ":" + key
 }
 
 // NewMigakuService creates a new service instance
@@ -130,7 +130,7 @@ func NewMigakuService(repo *Repository, cache *Cache) *MigakuService {
 }
 
 // GetWords retrieves words with optional status and language filters
-func (s *MigakuService) GetWords(ctx context.Context, browser *Browser, lang, status string) ([]Word, error) {
+func (s *MigakuService) GetWords(ctx context.Context, client *MigakuClient, lang, status string) ([]Word, error) {
 	if status != "" && status != statusKnown && status != statusLearning && status != statusUnknown && status != statusIgnored {
 		return nil, errors.New("invalid status: must be one of: known, learning, unknown, ignored")
 	}
@@ -146,7 +146,7 @@ func (s *MigakuService) GetWords(ctx context.Context, browser *Browser, lang, st
 	} else {
 		cacheKey += lang
 	}
-	cacheKey = s.scopedCacheKey(browser, cacheKey)
+	cacheKey = s.scopedCacheKey(client, cacheKey)
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if words, ok := cached.([]Word); ok {
@@ -173,7 +173,7 @@ func (s *MigakuService) GetWords(ctx context.Context, browser *Browser, lang, st
 		limit = 10000
 	}
 
-	rows, err := s.repo.GetWords(ctx, browser, lang, dbStatus, limit)
+	rows, err := s.repo.GetWords(ctx, client, lang, dbStatus, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -185,8 +185,8 @@ func (s *MigakuService) GetWords(ctx context.Context, browser *Browser, lang, st
 }
 
 // GetDecks retrieves all decks with caching
-func (s *MigakuService) GetDecks(ctx context.Context, browser *Browser) ([]Deck, error) {
-	cacheKey := s.scopedCacheKey(browser, "decks")
+func (s *MigakuService) GetDecks(ctx context.Context, client *MigakuClient) ([]Deck, error) {
+	cacheKey := s.scopedCacheKey(client, "decks")
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if decks, ok := cached.([]Deck); ok {
@@ -194,7 +194,7 @@ func (s *MigakuService) GetDecks(ctx context.Context, browser *Browser) ([]Deck,
 		}
 	}
 
-	rows, err := s.repo.GetDecks(ctx, browser)
+	rows, err := s.repo.GetDecks(ctx, client)
 	if err != nil {
 		return nil, err
 	}
@@ -206,8 +206,8 @@ func (s *MigakuService) GetDecks(ctx context.Context, browser *Browser) ([]Deck,
 }
 
 // GetStatusCounts retrieves status counts with caching
-func (s *MigakuService) GetStatusCounts(ctx context.Context, browser *Browser, lang, deckID string) (*StatusCounts, error) {
-	cacheKey := s.scopedCacheKey(browser, s.buildStatusCountsCacheKey(lang, deckID))
+func (s *MigakuService) GetStatusCounts(ctx context.Context, client *MigakuClient, lang, deckID string) (*StatusCounts, error) {
+	cacheKey := s.scopedCacheKey(client, s.buildStatusCountsCacheKey(lang, deckID))
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if counts, ok := cached.(*StatusCounts); ok {
@@ -215,7 +215,7 @@ func (s *MigakuService) GetStatusCounts(ctx context.Context, browser *Browser, l
 		}
 	}
 
-	rows, err := s.repo.GetStatusCounts(ctx, browser, lang, deckID)
+	rows, err := s.repo.GetStatusCounts(ctx, client, lang, deckID)
 	if err != nil {
 		return nil, err
 	}
@@ -227,8 +227,8 @@ func (s *MigakuService) GetStatusCounts(ctx context.Context, browser *Browser, l
 }
 
 // GetTables retrieves all database tables with caching
-func (s *MigakuService) GetTables(ctx context.Context, browser *Browser) ([]Table, error) {
-	cacheKey := s.scopedCacheKey(browser, "tables")
+func (s *MigakuService) GetTables(ctx context.Context, client *MigakuClient) ([]Table, error) {
+	cacheKey := s.scopedCacheKey(client, "tables")
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if tables, ok := cached.([]Table); ok {
@@ -236,7 +236,7 @@ func (s *MigakuService) GetTables(ctx context.Context, browser *Browser) ([]Tabl
 		}
 	}
 
-	rows, err := s.repo.GetTables(ctx, browser)
+	rows, err := s.repo.GetTables(ctx, client)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ type DifficultWord struct {
 // GetDifficultWords retrieves words with highest fail rates
 func (s *MigakuService) GetDifficultWords(
 	ctx context.Context,
-	browser *Browser,
+	client *MigakuClient,
 	lang string,
 	limit int,
 	deckID string,
@@ -288,7 +288,7 @@ func (s *MigakuService) GetDifficultWords(
 	if limit == 0 {
 		limit = 50
 	}
-	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("difficult:words:%s:%d:%s", lang, limit, deckID))
+	cacheKey := s.scopedCacheKey(client, fmt.Sprintf("difficult:words:%s:%d:%s", lang, limit, deckID))
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if words, ok := cached.([]DifficultWord); ok {
@@ -296,7 +296,7 @@ func (s *MigakuService) GetDifficultWords(
 		}
 	}
 
-	rows, err := s.repo.GetDifficultWords(ctx, browser, lang, limit, deckID)
+	rows, err := s.repo.GetDifficultWords(ctx, client, lang, limit, deckID)
 	if err != nil {
 		return nil, err
 	}
@@ -321,8 +321,8 @@ type FieldMetadata struct {
 type DatabaseSchema map[string]map[string]FieldMetadata
 
 // GetDatabaseSchema retrieves the database schema and transforms it into a nested structure
-func (s *MigakuService) GetDatabaseSchema(ctx context.Context, browser *Browser) (DatabaseSchema, error) {
-	cacheKey := s.scopedCacheKey(browser, "database:schema")
+func (s *MigakuService) GetDatabaseSchema(ctx context.Context, client *MigakuClient) (DatabaseSchema, error) {
+	cacheKey := s.scopedCacheKey(client, "database:schema")
 
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if schema, ok := cached.(DatabaseSchema); ok {
@@ -330,7 +330,7 @@ func (s *MigakuService) GetDatabaseSchema(ctx context.Context, browser *Browser)
 		}
 	}
 
-	rows, err := s.repo.GetDatabaseSchema(ctx, browser)
+	rows, err := s.repo.GetDatabaseSchema(ctx, client)
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +393,7 @@ type StudyStats struct {
 
 const msPerDay = int64(24 * 60 * 60 * 1000)
 
-func (s *MigakuService) GetWordStats(ctx context.Context, browser *Browser, lang, deckID string) (*WordStats, error) {
+func (s *MigakuService) GetWordStats(ctx context.Context, client *MigakuClient, lang, deckID string) (*WordStats, error) {
 	if lang == "" {
 		return nil, errors.New("lang parameter is required")
 	}
@@ -429,7 +429,7 @@ func (s *MigakuService) GetWordStats(ctx context.Context, browser *Browser, lang
 		params = []any{lang, deckID}
 	}
 
-	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("stats:words:%s:%s", lang, deckID))
+	cacheKey := s.scopedCacheKey(client, fmt.Sprintf("stats:words:%s:%s", lang, deckID))
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if ws, ok := cached.(*WordStats); ok {
 			return ws, nil
@@ -437,13 +437,13 @@ func (s *MigakuService) GetWordStats(ctx context.Context, browser *Browser, lang
 	}
 
 	type wordStatsRow struct {
-		KnownCount    int `json:"known_count"`
-		LearningCount int `json:"learning_count"`
-		UnknownCount  int `json:"unknown_count"`
-		IgnoredCount  int `json:"ignored_count"`
+		KnownCount    int `db:"known_count"    json:"known_count"`
+		LearningCount int `db:"learning_count" json:"learning_count"`
+		UnknownCount  int `db:"unknown_count"  json:"unknown_count"`
+		IgnoredCount  int `db:"ignored_count"  json:"ignored_count"`
 	}
 
-	rows, err := runQuery[wordStatsRow](ctx, browser, query, params...)
+	rows, err := runQuery[wordStatsRow](ctx, client, query, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -461,7 +461,7 @@ func (s *MigakuService) GetWordStats(ctx context.Context, browser *Browser, lang
 	return stats, nil
 }
 
-func (s *MigakuService) GetDueStats(ctx context.Context, browser *Browser, lang, deckID, periodID string) (*DueStats, error) {
+func (s *MigakuService) GetDueStats(ctx context.Context, client *MigakuClient, lang, deckID, periodID string) (*DueStats, error) {
 	if lang == "" {
 		return nil, errors.New("lang parameter is required")
 	}
@@ -470,7 +470,7 @@ func (s *MigakuService) GetDueStats(ctx context.Context, browser *Browser, lang,
 		periodID = "1 Month"
 	}
 
-	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("stats:due:%s:%s:%s", lang, deckID, periodID))
+	cacheKey := s.scopedCacheKey(client, fmt.Sprintf("stats:due:%s:%s:%s", lang, deckID, periodID))
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if ds, ok := cached.(*DueStats); ok {
 			return ds, nil
@@ -481,10 +481,10 @@ func (s *MigakuService) GetDueStats(ctx context.Context, browser *Browser, lang,
 	currentDate = time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, currentDate.Location())
 
 	type currentDateRow struct {
-		Entry string `json:"entry"`
+		Entry string `db:"entry" json:"entry"`
 	}
 
-	dateRows, err := runQuery[currentDateRow](ctx, browser, `
+	dateRows, err := runQuery[currentDateRow](ctx, client, `
 SELECT entry 
 FROM keyValue
 WHERE key = 'study.activeDay.currentDate';`)
@@ -506,7 +506,7 @@ WHERE key = 'study.activeDay.currentDate';`)
 		forecastDays = 3650
 
 		type maxDueRow struct {
-			MaxDue *int `json:"maxDue"`
+			MaxDue *int `db:"maxDue" json:"maxDue"`
 		}
 
 		maxDueQuery := `
@@ -521,7 +521,7 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 			maxDueParams = append(maxDueParams, deckID)
 		}
 
-		maxDueRows, err := runQuery[maxDueRow](ctx, browser, maxDueQuery, maxDueParams...)
+		maxDueRows, err := runQuery[maxDueRow](ctx, client, maxDueQuery, maxDueParams...)
 		if err == nil && len(maxDueRows) > 0 && maxDueRows[0].MaxDue != nil {
 			endDayNumber = *maxDueRows[0].MaxDue
 		} else {
@@ -547,9 +547,9 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 	actualForecastDays := endDayNumber - currentDayNumber + 1
 
 	type dueRow struct {
-		Due           int    `json:"due"`
-		IntervalRange string `json:"interval_range"`
-		Count         int    `json:"count"`
+		Due           int    `db:"due"            json:"due"`
+		IntervalRange string `db:"interval_range" json:"interval_range"`
+		Count         int    `db:"count"          json:"count"`
 	}
 
 	query := `
@@ -572,7 +572,7 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 	}
 	query += " GROUP BY due, interval_range ORDER BY due;"
 
-	rows, err := runQuery[dueRow](ctx, browser, query, params...)
+	rows, err := runQuery[dueRow](ctx, client, query, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -632,7 +632,7 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 
 func (s *MigakuService) GetIntervalStats(
 	ctx context.Context,
-	browser *Browser,
+	client *MigakuClient,
 	lang, deckID, percentileID string,
 ) (*IntervalStats, error) {
 	if lang == "" {
@@ -643,7 +643,7 @@ func (s *MigakuService) GetIntervalStats(
 		percentileID = "75th"
 	}
 
-	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("stats:interval:%s:%s:%s", lang, deckID, percentileID))
+	cacheKey := s.scopedCacheKey(client, fmt.Sprintf("stats:interval:%s:%s:%s", lang, deckID, percentileID))
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if is, ok := cached.(*IntervalStats); ok {
 			return is, nil
@@ -651,8 +651,8 @@ func (s *MigakuService) GetIntervalStats(
 	}
 
 	type intervalRow struct {
-		IntervalGroup float64 `json:"interval_group"`
-		Count         int     `json:"count"`
+		IntervalGroup float64 `db:"interval_group" json:"interval_group"`
+		Count         int     `db:"count"          json:"count"`
 	}
 
 	query := `
@@ -671,7 +671,7 @@ func (s *MigakuService) GetIntervalStats(
 	}
 	query += " GROUP BY interval_group ORDER BY interval_group;"
 
-	rows, err := runQuery[intervalRow](ctx, browser, query, params...)
+	rows, err := runQuery[intervalRow](ctx, client, query, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -741,7 +741,11 @@ func (s *MigakuService) GetIntervalStats(
 	return stats, nil
 }
 
-func (s *MigakuService) GetStudyStats(ctx context.Context, browser *Browser, lang, deckID, periodID string) (*StudyStats, error) {
+func (s *MigakuService) GetStudyStats(
+	ctx context.Context,
+	client *MigakuClient,
+	lang, deckID, periodID string,
+) (*StudyStats, error) {
 	if lang == "" {
 		return nil, errors.New("lang parameter is required")
 	}
@@ -750,7 +754,7 @@ func (s *MigakuService) GetStudyStats(ctx context.Context, browser *Browser, lan
 		periodID = "1 Month"
 	}
 
-	cacheKey := s.scopedCacheKey(browser, fmt.Sprintf("stats:study:%s:%s:%s", lang, deckID, periodID))
+	cacheKey := s.scopedCacheKey(client, fmt.Sprintf("stats:study:%s:%s:%s", lang, deckID, periodID))
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		if ss, ok := cached.(*StudyStats); ok {
 			return ss, nil
@@ -782,10 +786,10 @@ WHERE ct.lang = ? AND r.del = 0`
 		}
 
 		type minDayRow struct {
-			MinDay *int `json:"minDay"`
+			MinDay *int `db:"minDay" json:"minDay"`
 		}
 
-		rows, err := runQuery[minDayRow](ctx, browser, query, params...)
+		rows, err := runQuery[minDayRow](ctx, client, query, params...)
 		if err == nil && len(rows) > 0 && rows[0].MinDay != nil {
 			earliestReviewDayForAllTime = rows[0].MinDay
 			periodDays = currentDayNumber - *earliestReviewDayForAllTime + 1
@@ -946,79 +950,79 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type IN (1, 2)`
 	}
 
 	type studyRow struct {
-		DaysStudied  int `json:"days_studied"`
-		TotalReviews int `json:"total_reviews"`
+		DaysStudied  int `db:"days_studied"  json:"days_studied"`
+		TotalReviews int `db:"total_reviews" json:"total_reviews"`
 	}
 
 	type passRateRow struct {
-		SuccessfulReviews int `json:"successful_reviews"`
-		FailedReviews     int `json:"failed_reviews"`
+		SuccessfulReviews int `db:"successful_reviews" json:"successful_reviews"`
+		FailedReviews     int `db:"failed_reviews"     json:"failed_reviews"`
 	}
 
 	type newCardsRow struct {
-		NewCardsReviewed int `json:"new_cards_reviewed"`
+		NewCardsReviewed int `db:"new_cards_reviewed" json:"new_cards_reviewed"`
 	}
 
 	type cardsAddedRow struct {
-		CardsAdded int `json:"cards_added"`
+		CardsAdded int `db:"cards_added" json:"cards_added"`
 	}
 
 	type cardsLearnedRow struct {
-		CardsLearned int `json:"cards_learned"`
+		CardsLearned int `db:"cards_learned" json:"cards_learned"`
 	}
 
 	type totalNewCardsRow struct {
-		TotalNewCards int `json:"total_new_cards"`
+		TotalNewCards int `db:"total_new_cards" json:"total_new_cards"`
 	}
 
 	type cardsLearnedPerDayRow struct {
-		CardsLearnedPerDay float64 `json:"cards_learned_per_day"`
+		CardsLearnedPerDay float64 `db:"cards_learned_per_day" json:"cards_learned_per_day"`
 	}
 
 	type timeRow struct {
-		TotalTimeSeconds int     `json:"total_time_seconds"`
-		ReviewCount      int     `json:"review_count"`
-		AvgTimeSeconds   float64 `json:"avg_time_seconds"`
+		TotalTimeSeconds int     `db:"total_time_seconds" json:"total_time_seconds"`
+		ReviewCount      int     `db:"review_count"       json:"review_count"`
+		AvgTimeSeconds   float64 `db:"avg_time_seconds"   json:"avg_time_seconds"`
 	}
 
-	studyResults, err := runQuery[studyRow](ctx, browser, studyQuery, studyParams...)
+	studyResults, err := runQuery[studyRow](ctx, client, studyQuery, studyParams...)
 	if err != nil {
 		return nil, err
 	}
-	passRateResults, err := runQuery[passRateRow](ctx, browser, passRateQuery, passRateParams...)
+	passRateResults, err := runQuery[passRateRow](ctx, client, passRateQuery, passRateParams...)
 	if err != nil {
 		return nil, err
 	}
-	newCardsResults, err := runQuery[newCardsRow](ctx, browser, newCardsQuery, newCardsParams...)
+	newCardsResults, err := runQuery[newCardsRow](ctx, client, newCardsQuery, newCardsParams...)
 	if err != nil {
 		return nil, err
 	}
-	cardsAddedResults, err := runQuery[cardsAddedRow](ctx, browser, cardsAddedQuery, cardsAddedParams...)
+	cardsAddedResults, err := runQuery[cardsAddedRow](ctx, client, cardsAddedQuery, cardsAddedParams...)
 	if err != nil {
 		return nil, err
 	}
-	cardsLearnedResults, err := runQuery[cardsLearnedRow](ctx, browser, cardsLearnedQuery, cardsLearnedParams...)
+	cardsLearnedResults, err := runQuery[cardsLearnedRow](ctx, client, cardsLearnedQuery, cardsLearnedParams...)
 	if err != nil {
 		return nil, err
 	}
-	totalNewCardsResults, err := runQuery[totalNewCardsRow](ctx, browser, totalNewCardsQuery, totalNewCardsParams...)
+	totalNewCardsResults, err := runQuery[totalNewCardsRow](ctx, client, totalNewCardsQuery, totalNewCardsParams...)
 	if err != nil {
 		return nil, err
 	}
 	cardsLearnedPerDayResults, err := runQuery[cardsLearnedPerDayRow](
 		ctx,
-		browser,
+		client,
 		cardsLearnedPerDayQuery,
 		cardsLearnedPerDayParams...,
 	)
 	if err != nil {
 		return nil, err
 	}
-	newCardsTimeResults, err := runQuery[timeRow](ctx, browser, newCardsTimeQuery, newCardsTimeParams...)
+	newCardsTimeResults, err := runQuery[timeRow](ctx, client, newCardsTimeQuery, newCardsTimeParams...)
 	if err != nil {
 		return nil, err
 	}
-	reviewsTimeResults, err := runQuery[timeRow](ctx, browser, reviewsTimeQuery, reviewsTimeParams...)
+	reviewsTimeResults, err := runQuery[timeRow](ctx, client, reviewsTimeQuery, reviewsTimeParams...)
 	if err != nil {
 		return nil, err
 	}
