@@ -3,7 +3,7 @@
 # Run the API server
 run:
 	@echo "Starting Migoku API Server..."
-	API_SECRET="top-secret" go run ./...
+	LOG_LEVEL=debug API_SECRET="top-secret" go run ./...
 
 # Build the server binary
 build:
