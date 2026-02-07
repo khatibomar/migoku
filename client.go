@@ -32,6 +32,8 @@ type MigakuClient struct {
 
 // NewMigakuClient initializes an API session and downloads the Migaku SRS database.
 // It returns an error if login fails or if the database cannot be fetched.
+//
+//nolint:contextcheck // background refresh loop not tied to request context
 func NewMigakuClient(
 	ctx context.Context,
 	logger *slog.Logger,
@@ -84,7 +86,7 @@ func NewMigakuClient(
 			for {
 				select {
 				case <-ticker.C:
-					if err := c.refreshDBIfStale(context.Background(), ttl); err != nil {
+					if err := c.refreshDBIfStale(refreshCtx, ttl); err != nil {
 						c.logger.Error("failed to refresh db", "error", err)
 					}
 				case <-refreshCtx.Done():
