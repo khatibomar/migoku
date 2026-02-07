@@ -30,7 +30,6 @@ paths:
             example:
               email: you@example.com
               password: yourpassword
-              language: ja
       responses:
         '200':
           description: Login successful
@@ -421,9 +420,7 @@ components:
           type: string
         password:
           type: string
-        language:
-          type: string
-      required: [email, password, language]
+      required: [email, password]
     LoginResponse:
       type: object
       properties:
