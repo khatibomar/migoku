@@ -42,19 +42,46 @@ func NewRepository() *Repository {
 // GetWords retrieves words from WordList with optional filters
 // status can be empty for all words, or "KNOWN", "LEARNING", etc.
 // limit can be 0 for no limit
-func (r *Repository) GetWords(ctx context.Context, client *MigakuClient, lang, status string, limit int) ([]wordRow, error) {
+func (r *Repository) GetWords(
+	ctx context.Context,
+	client *MigakuClient,
+	lang, status string,
+	limit int,
+	deckID string,
+) ([]wordRow, error) {
 	var query string
 	var params []any
 
-	query = "SELECT dictForm, secondary, knownStatus FROM WordList WHERE del = 0"
+	if deckID != "" {
+		query = `SELECT DISTINCT w.dictForm, w.secondary, w.knownStatus
+			FROM WordList w
+			JOIN CardWordRelation cwr
+				ON w.dictForm = cwr.dictForm
+				AND w.secondary = cwr.secondary
+				AND w.partOfSpeech = cwr.partOfSpeech
+				AND w.language = cwr.language
+			JOIN card c ON cwr.cardId = c.id
+			WHERE w.del = 0 AND c.del = 0 AND c.deckId = ?`
+		params = append(params, deckID)
+	} else {
+		query = "SELECT dictForm, secondary, knownStatus FROM WordList WHERE del = 0"
+	}
 
 	if lang != "" {
-		query += " AND language = ?"
+		if deckID != "" {
+			query += " AND w.language = ?"
+		} else {
+			query += " AND language = ?"
+		}
 		params = append(params, lang)
 	}
 
 	if status != "" {
-		query += " AND knownStatus = ?"
+		if deckID != "" {
+			query += " AND w.knownStatus = ?"
+		} else {
+			query += " AND knownStatus = ?"
+		}
 		params = append(params, status)
 	}
 

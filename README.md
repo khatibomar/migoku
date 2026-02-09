@@ -36,8 +36,6 @@ Server runs on `http://localhost:8080` with interactive API documentation at `/d
 
 OpenAPI spec is available at `/openapi.yaml`.
 
-> First login per user is going to be slow, cause the login page download a huge wasm file. Subsequent login requests will be faster.
-
 ## Configuration
 
 Environment variables:
