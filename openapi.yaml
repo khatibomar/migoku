@@ -91,6 +91,11 @@ paths:
           schema:
             type: string
           description: Filter by language code (e.g. ja, en)
+        - in: query
+          name: deckId
+          schema:
+            type: string
+          description: Filter by deck ID
       responses:
         '200':
           description: List of words

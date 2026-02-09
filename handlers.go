@@ -47,8 +47,9 @@ func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
 
 	lang := r.URL.Query().Get("lang")
 	status := r.URL.Query().Get("status")
+	deckID := r.URL.Query().Get("deckId")
 
-	words, err := app.service.GetWords(r.Context(), client, lang, status)
+	words, err := app.service.GetWords(r.Context(), client, lang, status, deckID)
 	if err != nil {
 		if err.Error() == "invalid status: must be one of: known, learning, unknown, ignored" {
 			app.writeJSONError(w, r, http.StatusBadRequest, "Status must be one of: known, learning, unknown, ignored")
