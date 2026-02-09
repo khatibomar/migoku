@@ -48,6 +48,8 @@ func (r *Repository) GetWords(
 	lang, status string,
 	limit int,
 	deckID string,
+	form string,
+	formExact bool,
 ) ([]wordRow, error) {
 	var query string
 	var params []any
@@ -83,6 +85,23 @@ func (r *Repository) GetWords(
 			query += " AND knownStatus = ?"
 		}
 		params = append(params, status)
+	}
+
+	if form != "" {
+		match := form
+		operator := "LIKE"
+		if formExact {
+			operator = "="
+		} else {
+			match = "%" + form + "%"
+		}
+
+		if deckID != "" {
+			query += " AND (w.dictForm " + operator + " ? OR w.secondary " + operator + " ?)"
+		} else {
+			query += " AND (dictForm " + operator + " ? OR secondary " + operator + " ?)"
+		}
+		params = append(params, match, match)
 	}
 
 	if limit > 0 {

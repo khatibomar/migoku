@@ -48,8 +48,19 @@ func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
 	lang := r.URL.Query().Get("lang")
 	status := r.URL.Query().Get("status")
 	deckID := r.URL.Query().Get("deckId")
+	form := r.URL.Query().Get("form")
+	formExactStr := r.URL.Query().Get("formExact")
+	formExact := false
+	if formExactStr != "" {
+		parsedExact, err := strconv.ParseBool(formExactStr)
+		if err != nil {
+			app.writeJSONError(w, r, http.StatusBadRequest, "formExact must be a boolean")
+			return
+		}
+		formExact = parsedExact
+	}
 
-	words, err := app.service.GetWords(r.Context(), client, lang, status, deckID)
+	words, err := app.service.GetWords(r.Context(), client, lang, status, deckID, form, formExact)
 	if err != nil {
 		if err.Error() == "invalid status: must be one of: known, learning, unknown, ignored" {
 			app.writeJSONError(w, r, http.StatusBadRequest, "Status must be one of: known, learning, unknown, ignored")
