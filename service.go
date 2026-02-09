@@ -130,7 +130,12 @@ func NewMigakuService(repo *Repository, cache *Cache) *MigakuService {
 }
 
 // GetWords retrieves words with optional status and language filters
-func (s *MigakuService) GetWords(ctx context.Context, client *MigakuClient, lang, status, deckID, form string, formExact bool) ([]Word, error) {
+func (s *MigakuService) GetWords(
+	ctx context.Context,
+	client *MigakuClient,
+	lang, status, deckID, form string,
+	formExact bool,
+) ([]Word, error) {
 	if status != "" && status != statusKnown && status != statusLearning && status != statusUnknown && status != statusIgnored {
 		return nil, errors.New("invalid status: must be one of: known, learning, unknown, ignored")
 	}
