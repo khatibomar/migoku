@@ -71,4 +71,10 @@ make docker-run
 
 ## Credits
 
-Thanks to [https://github.com/SebastianGuadalupe/MigakuStats](https://github.com/SebastianGuadalupe/MigakuStats) I learned how Migaku works by reading the plugin.
+Thanks to:
+- [https://github.com/SebastianGuadalupe/MigakuStats](https://github.com/SebastianGuadalupe/MigakuStats) I learned how Migaku works by reading the plugin.
+- waraki user on Discord for the decoding writing logic and login
+
+And all of contributors to the repo.
+<!-- readme: contributors -start -->
+<!-- readme: contributors -end -->
