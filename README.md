@@ -54,6 +54,11 @@ make clean
 make docker-run
 ```
 
+## Endpoints
+
+<!-- endpoints-start -->
+<!-- endpoints-end -->
+
 ## Cache
 
 - In-memory caching with 5-minute default TTL

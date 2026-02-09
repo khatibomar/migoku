@@ -1,0 +1,102 @@
+name: Contrib and endpoints
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-endpoints:
+    runs-on: ubuntu-latest
+    name: Generate endpoints table
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate endpoints markdown
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+          python - <<'PY'
+          import yaml
+          from pathlib import Path
+
+          def load_spec(path):
+              with open(path, "r", encoding="utf-8") as f:
+                  return yaml.safe_load(f)
+
+          def build_rows(spec):
+              rows = []
+              paths = spec.get("paths", {})
+              for path, methods in paths.items():
+                  if not isinstance(methods, dict):
+                      continue
+                  for method, details in methods.items():
+                      if method.startswith("x-"):
+                          continue
+                      if not isinstance(details, dict):
+                          continue
+                      summary = details.get("summary") or details.get("description") or ""
+                      summary = " ".join(str(summary).split())
+                      tags = details.get("tags") or []
+                      tag_text = ", ".join(tags)
+                      rows.append((method.upper(), path, summary, tag_text))
+              rows.sort(key=lambda r: (r[1], r[0]))
+              return rows
+
+          def render_table(rows):
+              lines = [
+                  "| Method | Path | Summary | Tags |",
+                  "| --- | --- | --- | --- |",
+              ]
+              for method, path, summary, tags in rows:
+                  lines.append(f"| {method} | {path} | {summary} | {tags} |")
+              return "\n".join(lines) + "\n"
+
+          spec = load_spec("openapi.yaml")
+          table = render_table(build_rows(spec))
+          Path("/tmp/endpoints.md").write_text(table, encoding="utf-8")
+          PY
+
+      - name: Insert endpoints table into README
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          readme_path = Path("README.md")
+          readme = readme_path.read_text(encoding="utf-8")
+          table = Path("/tmp/endpoints.md").read_text(encoding="utf-8")
+
+          start = "<!-- endpoints-start -->"
+          end = "<!-- endpoints-end -->"
+          if start not in readme or end not in readme:
+              raise SystemExit("Endpoints markers not found in README.md")
+
+          before = readme.split(start)[0]
+          after = readme.split(end)[1]
+          updated = f"{before}{start}\n\n{table}\n{end}{after}"
+          readme_path.write_text(updated, encoding="utf-8")
+          PY
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add README.md
+          git commit -m "Update endpoints table in README" || echo "No changes to commit"
+
+      - name: Push changes
+        run: git push
+
+  contrib-readme-job:
+    runs-on: ubuntu-latest
+    name: A job to automate contrib in readme
+    steps:
+      - name: Contribute List
+        uses: akhilmhdh/contributors-readme-action@v2.3.11
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
