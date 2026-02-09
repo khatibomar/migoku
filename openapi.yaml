@@ -96,6 +96,17 @@ paths:
           schema:
             type: string
           description: Filter by deck ID
+        - in: query
+          name: form
+          schema:
+            type: string
+          description: Filter by dict form or secondary form
+        - in: query
+          name: formExact
+          schema:
+            type: boolean
+            default: false
+          description: If true, match exact; otherwise contains
       responses:
         '200':
           description: List of words
