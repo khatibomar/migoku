@@ -57,6 +57,25 @@ make docker-run
 ## Endpoints
 
 <!-- endpoints-start -->
+
+| Method | Path | Summary | Tags |
+| --- | --- | --- | --- |
+| GET | /api/v1/decks | Get all active decks | Decks |
+| GET | /api/v1/stats/due | Get forecast of cards due per day for a given period | Stats |
+| GET | /api/v1/stats/intervals | Get distribution of card intervals | Stats |
+| GET | /api/v1/stats/study | Get study statistics over a time period | Stats |
+| GET | /api/v1/stats/words | Get aggregated word status counts for a language | Stats |
+| GET | /api/v1/status/counts | Get aggregated word status counts | Counts |
+| GET | /api/v1/words | Get words with optional filters | Words |
+| GET | /api/v1/words/difficult | Get words with highest fail rates | Words |
+| POST | /api/v1/words/status | Change a word status in Migaku | Words |
+| POST | /auth/login | Login and receive an API key | Auth |
+| POST | /auth/logout | Logout and close the client session | Auth |
+| POST | /dev/cache/clear | Clear the in-memory cache | Dev |
+| GET | /dev/database/schema | Get complete database schema | Dev |
+| GET | /dev/status | Get server status and configuration | Dev |
+| GET | /dev/tables | List all database tables | Dev |
+
 <!-- endpoints-end -->
 
 ## Cache
