@@ -77,4 +77,24 @@ Thanks to:
 
 And all of contributors to the repo.
 <!-- readme: contributors -start -->
+<table>
+	<tbody>
+		<tr>
+            <td align="center">
+                <a href="https://github.com/khatibomar">
+                    <img src="https://avatars.githubusercontent.com/u/35725554?v=4" width="100;" alt="khatibomar"/>
+                    <br />
+                    <sub><b>عين</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/StayBlue">
+                    <img src="https://avatars.githubusercontent.com/u/23127866?v=4" width="100;" alt="StayBlue"/>
+                    <br />
+                    <sub><b>StayBlue</b></sub>
+                </a>
+            </td>
+		</tr>
+	<tbody>
+</table>
 <!-- readme: contributors -end -->
