@@ -106,19 +106,63 @@ func NewMigakuClient(
 }
 
 func (c *MigakuClient) refreshDB(ctx context.Context) error {
+	start := time.Now()
+	c.logger.Debug("Refreshing local database")
+
+	c.mu.RLock()
+	session := c.session
+	c.mu.RUnlock()
+
+	if session == nil {
+		return errors.New("missing migaku session")
+	}
+
+	data, err := session.ForceDownloadSRSDB(ctx)
+	if err != nil {
+		return err
+	}
+	c.logger.Debug("Downloaded database", "bytes", len(data))
+
+	tmpPath := c.dbPath + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0o600); err != nil {
+		return fmt.Errorf("failed to write db temp file: %w", err)
+	}
+
+	newDB, err := sqlx.Open("sqlite", tmpPath)
+	if err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("failed to open new sqlite db: %w", err)
+	}
+	newDB.SetMaxOpenConns(1)
+	newDB.SetMaxIdleConns(1)
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.refreshDBLocked(ctx)
+
+	if err := os.Rename(tmpPath, c.dbPath); err != nil {
+		_ = newDB.Close()
+		return fmt.Errorf("failed to swap db file: %w", err)
+	}
+
+	if c.db != nil {
+		_ = c.db.Close()
+	}
+	c.db = newDB
+	c.lastRefresh = time.Now()
+	c.logger.Debug("Local database refreshed", "duration_ms", time.Since(start).Milliseconds())
+	return nil
 }
 
 func (c *MigakuClient) refreshDBLocked(ctx context.Context) error {
 	start := time.Now()
-	c.logger.Debug("Refreshing local database")
+	c.logger.Debug("Refreshing local database (locked)")
 
 	if c.session == nil {
 		return errors.New("missing migaku session")
 	}
 
+	// We already hold the lock, so we can't optimize this path
+	// But this is only used for initial setup, not periodic refreshes
 	data, err := c.session.ForceDownloadSRSDB(ctx)
 	if err != nil {
 		return err
