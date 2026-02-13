@@ -72,7 +72,7 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if _, exists := app.accounts[apiKey]; exists {
 		if err := encode(w, r, http.StatusOK, map[string]string{
 			"api_key": apiKey,
-			"message": "Already, logged in",
+			"message": "Already logged in",
 		}); err != nil {
 			app.logger.Error("Failed to encode JSON response", "error", err)
 		}
