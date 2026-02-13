@@ -78,16 +78,9 @@ make docker-run
 
 <!-- endpoints-end -->
 
-## Cache
-
-- In-memory caching with 5-minute default TTL
-- Automatic refresh on expiry
-- Configurable via API or environment
-
 ## Upcoming
 
 - rate limiting
-- paginating
 - more endpoints
 - refactoring
 - bug fixes as they occur
