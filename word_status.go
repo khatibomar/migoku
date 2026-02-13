@@ -10,22 +10,16 @@ import (
 	"time"
 )
 
-type WordStatusResult struct {
-	Ok      bool                   `json:"ok"`
-	Reason  string                 `json:"reason,omitempty"`
-	Results []WordStatusItemResult `json:"results,omitempty"`
-}
+var (
+	ErrWordNotFound     = errors.New("word not found")
+	ErrInvalidStatus    = errors.New("invalid status: must be one of: known, learning, tracked, ignored")
+	ErrWordTextRequired = errors.New("wordText is required")
+	ErrClientNotAuth    = errors.New("client not authenticated")
+)
 
 type WordStatusItem struct {
 	WordText  string `json:"wordText"`
 	Secondary string `json:"secondary,omitempty"`
-}
-
-type WordStatusItemResult struct {
-	WordText  string `json:"wordText"`
-	Secondary string `json:"secondary,omitempty"`
-	Ok        bool   `json:"ok"`
-	Reason    string `json:"reason,omitempty"`
 }
 
 type wordRecord struct {
@@ -72,7 +66,7 @@ func (s *MigakuService) SetWordStatus(
 	ctx context.Context,
 	client *MigakuClient,
 	wordText, secondary, status, language string,
-) (*WordStatusResult, error) {
+) error {
 	wordText = strings.TrimSpace(wordText)
 	secondary = strings.TrimSpace(secondary)
 	client.logger.Info(
@@ -97,7 +91,7 @@ func (s *MigakuService) SetWordStatusBatch(
 	items []WordStatusItem,
 	status string,
 	language string,
-) (*WordStatusResult, error) {
+) error {
 	client.logger.Info(
 		"Updating word status batch",
 		slog.String("status", status),
@@ -112,18 +106,18 @@ func (s *MigakuService) setWordStatusItems(
 	items []WordStatusItem,
 	status string,
 	language string,
-) (*WordStatusResult, error) {
+) error {
 	if client == nil {
-		return nil, errors.New("client not authenticated")
+		return ErrClientNotAuth
 	}
 
 	update, ok := statusToUpdate(status)
 	if !ok {
-		return nil, errors.New("invalid status: must be one of: known, learning, tracked, ignored")
+		return ErrInvalidStatus
 	}
 
 	if len(items) == 0 {
-		return nil, errors.New("wordText is required")
+		return ErrWordTextRequired
 	}
 
 	normalizedItems := make([]WordStatusItem, 0, len(items))
@@ -131,7 +125,7 @@ func (s *MigakuService) setWordStatusItems(
 		wordText := strings.TrimSpace(item.WordText)
 		secondary := strings.TrimSpace(item.Secondary)
 		if wordText == "" {
-			return nil, errors.New("wordText is required")
+			return ErrWordTextRequired
 		}
 		normalizedItems = append(normalizedItems, WordStatusItem{
 			WordText:  wordText,
@@ -139,25 +133,18 @@ func (s *MigakuService) setWordStatusItems(
 		})
 	}
 
-	results := make([]WordStatusItemResult, 0, len(normalizedItems))
 	updates := make([]map[string]any, 0, len(normalizedItems))
 	updateRecords := make([]wordRecord, 0, len(normalizedItems))
 	modTimestamp := time.Now().UnixMilli()
 
 	if err := client.refreshDBIfStale(ctx, s.cache.ttl); err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, item := range normalizedItems {
 		record, payload, recErr := lookupWordRecord(ctx, client, item.WordText, item.Secondary, language)
 		if recErr != nil {
-			results = append(results, WordStatusItemResult{
-				WordText:  item.WordText,
-				Secondary: item.Secondary,
-				Ok:        false,
-				Reason:    recErr.Error(),
-			})
-			continue
+			return fmt.Errorf("%w: %s", ErrWordNotFound, item.WordText)
 		}
 
 		serverMod := int64(-1)
@@ -177,31 +164,18 @@ func (s *MigakuService) setWordStatusItems(
 		payload["serverMod"] = serverMod
 		updates = append(updates, payload)
 		updateRecords = append(updateRecords, record)
-		results = append(results, WordStatusItemResult{
-			WordText:  item.WordText,
-			Secondary: item.Secondary,
-			Ok:        true,
-		})
-	}
-
-	if len(updates) == 0 {
-		return &WordStatusResult{Ok: false, Results: results, Reason: "no valid items"}, nil
 	}
 
 	if err := client.session.PushSync(ctx, updates); err != nil {
-		for i := range results {
-			results[i].Ok = false
-			results[i].Reason = err.Error()
-		}
-		return &WordStatusResult{Ok: false, Results: results, Reason: err.Error()}, nil
+		return fmt.Errorf("failed to sync: %w", err)
 	}
 
 	if err := updateLocalWordStatus(ctx, client, updateRecords, update, modTimestamp); err != nil {
-		return nil, fmt.Errorf("failed to update local db: %w", err)
+		return fmt.Errorf("failed to update local db: %w", err)
 	}
 
 	s.cache.Clear()
-	return &WordStatusResult{Ok: true, Results: results}, nil
+	return nil
 }
 
 func lookupWordRecord(

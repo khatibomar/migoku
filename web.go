@@ -8,9 +8,9 @@ import (
 	"net/http"
 )
 
-type errorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
+// ErrorResponse represents error details in error responses
+type ErrorResponse struct {
+	Error string `json:"error"`
 }
 
 // Validator is an object that can be validated.
@@ -31,12 +31,23 @@ func encode[T any](w http.ResponseWriter, _ *http.Request, status int, v T) erro
 }
 
 func (app *Application) writeJSONError(w http.ResponseWriter, r *http.Request, status int, message string) {
-	errText := http.StatusText(status)
-	app.logger.Error("HTTP error", slog.Int("status", status), slog.String("error", errText), slog.String("message", message))
-	if status == http.StatusInternalServerError {
+	app.logger.Error("HTTP error",
+		slog.Int("status", status),
+		slog.String("message", message),
+		slog.String("path", r.URL.Path),
+		slog.String("method", r.Method),
+	)
+
+	// Don't leak internal error details for 5xx errors
+	if status >= 500 {
 		message = "Internal server error"
 	}
-	if err := encode(w, r, status, errorResponse{Error: errText, Message: message}); err != nil {
+
+	response := ErrorResponse{
+		Error: message,
+	}
+
+	if err := encode(w, r, status, response); err != nil {
 		app.logger.Error("Failed to encode JSON error response", slog.String("error", err.Error()))
 	}
 }

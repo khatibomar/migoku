@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -15,8 +16,8 @@ var docsHTML []byte
 //go:embed openapi.yaml
 var openAPISpec []byte
 
-func (app *Application) respondJSON(w http.ResponseWriter, data any) {
-	if err := encode(w, nil, http.StatusOK, data); err != nil {
+func (app *Application) respondJSON(w http.ResponseWriter, r *http.Request, data any) {
+	if err := encode(w, r, http.StatusOK, data); err != nil {
 		app.logger.Error("Failed to encode JSON response", "error", err)
 	}
 }
@@ -71,7 +72,7 @@ func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.respondJSON(w, words)
+	app.respondJSON(w, r, words)
 }
 
 func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Request) {
@@ -124,35 +125,73 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 			})
 		}
 
-		result, err := app.service.SetWordStatusBatch(r.Context(), client, items, req.Status, req.Language)
+		err := app.service.SetWordStatusBatch(r.Context(), client, items, req.Status, req.Language)
 		if err != nil {
-			app.logger.Error("Failed to update word status batch", "error", err, "status", req.Status, "count", len(items))
-			app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
+			status := http.StatusInternalServerError
+			message := "Internal server error"
+
+			switch {
+			case errors.Is(err, ErrWordNotFound):
+				status = http.StatusNotFound
+				message = err.Error()
+			case errors.Is(err, ErrInvalidStatus), errors.Is(err, ErrWordTextRequired):
+				status = http.StatusBadRequest
+				message = err.Error()
+			case errors.Is(err, ErrClientNotAuth):
+				status = http.StatusUnauthorized
+				message = err.Error()
+			default:
+				app.logger.Error("Failed to update word status batch", "error", err, "status", req.Status, "count", len(items))
+			}
+
+			app.writeJSONError(w, r, status, message)
 			return
 		}
 
-		app.respondJSON(w, result)
+		app.respondJSON(w, r, map[string]any{
+			"message": "Word status updated successfully",
+			"count":   len(items),
+		})
 		return
 	}
 
-	result, err := app.service.SetWordStatus(r.Context(), client, req.WordText, req.Secondary, req.Status, req.Language)
+	err := app.service.SetWordStatus(r.Context(), client, req.WordText, req.Secondary, req.Status, req.Language)
 	if err != nil {
-		app.logger.Error(
-			"Failed to update word status",
-			"error",
-			err,
-			"status",
-			req.Status,
-			"wordText",
-			req.WordText,
-			"secondary",
-			req.Secondary,
-		)
-		app.writeJSONError(w, r, http.StatusInternalServerError, "Internal server error")
+		status := http.StatusInternalServerError
+		message := "Internal server error"
+
+		// Determine appropriate status code based on error type
+		switch {
+		case errors.Is(err, ErrWordNotFound):
+			status = http.StatusNotFound
+			message = err.Error()
+		case errors.Is(err, ErrInvalidStatus), errors.Is(err, ErrWordTextRequired):
+			status = http.StatusBadRequest
+			message = err.Error()
+		case errors.Is(err, ErrClientNotAuth):
+			status = http.StatusUnauthorized
+			message = err.Error()
+		default:
+			app.logger.Error(
+				"Failed to update word status",
+				"error",
+				err,
+				"status",
+				req.Status,
+				"wordText",
+				req.WordText,
+				"secondary",
+				req.Secondary,
+			)
+		}
+
+		app.writeJSONError(w, r, status, message)
 		return
 	}
 
-	app.respondJSON(w, result)
+	app.respondJSON(w, r, map[string]string{
+		"message": "Word status updated successfully",
+	})
 }
 
 func (app *Application) handleDecks(w http.ResponseWriter, r *http.Request) {
@@ -168,7 +207,7 @@ func (app *Application) handleDecks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.respondJSON(w, decks)
+	app.respondJSON(w, r, decks)
 }
 
 func (app *Application) handleStatusCounts(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +227,7 @@ func (app *Application) handleStatusCounts(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Return as array for backward compatibility with frontend
-	app.respondJSON(w, []StatusCounts{*counts})
+	app.respondJSON(w, r, []StatusCounts{*counts})
 }
 
 func (app *Application) handleTables(w http.ResponseWriter, r *http.Request) {
@@ -204,7 +243,7 @@ func (app *Application) handleTables(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.respondJSON(w, tables)
+	app.respondJSON(w, r, tables)
 }
 
 func (app *Application) handleDatabaseSchema(w http.ResponseWriter, r *http.Request) {
@@ -220,7 +259,7 @@ func (app *Application) handleDatabaseSchema(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	app.respondJSON(w, schema)
+	app.respondJSON(w, r, schema)
 }
 
 func (app *Application) handleDifficultWords(w http.ResponseWriter, r *http.Request) {
@@ -250,7 +289,7 @@ func (app *Application) handleDifficultWords(w http.ResponseWriter, r *http.Requ
 		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	app.respondJSON(w, words)
+	app.respondJSON(w, r, words)
 }
 
 func (app *Application) handleWordStats(w http.ResponseWriter, r *http.Request) {
@@ -273,7 +312,7 @@ func (app *Application) handleWordStats(w http.ResponseWriter, r *http.Request) 
 		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	app.respondJSON(w, stats)
+	app.respondJSON(w, r, stats)
 }
 
 func (app *Application) handleDueStats(w http.ResponseWriter, r *http.Request) {
@@ -297,7 +336,7 @@ func (app *Application) handleDueStats(w http.ResponseWriter, r *http.Request) {
 		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	app.respondJSON(w, stats)
+	app.respondJSON(w, r, stats)
 }
 
 func (app *Application) handleIntervalStats(w http.ResponseWriter, r *http.Request) {
@@ -321,7 +360,7 @@ func (app *Application) handleIntervalStats(w http.ResponseWriter, r *http.Reque
 		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	app.respondJSON(w, stats)
+	app.respondJSON(w, r, stats)
 }
 
 func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request) {
@@ -345,11 +384,11 @@ func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request)
 		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	app.respondJSON(w, stats)
+	app.respondJSON(w, r, stats)
 }
 
 func (app *Application) handleStatus(w http.ResponseWriter, r *http.Request) {
-	app.respondJSON(w, map[string]any{
+	app.respondJSON(w, r, map[string]any{
 		"status":    "running",
 		"cache_ttl": app.cache.ttl.String(),
 	})
@@ -391,7 +430,7 @@ func (app *Application) handleOpenAPISpec(w http.ResponseWriter, r *http.Request
 func (app *Application) handleClearCache(w http.ResponseWriter, r *http.Request) {
 	app.cache.Clear()
 	app.logger.Info("Cache cleared")
-	app.respondJSON(w, map[string]string{
+	app.respondJSON(w, r, map[string]string{
 		"status":  "success",
 		"message": "Cache cleared successfully",
 	})
