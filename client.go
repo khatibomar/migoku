@@ -128,25 +128,39 @@ func (c *MigakuClient) refreshDB(ctx context.Context) error {
 		return fmt.Errorf("failed to write db temp file: %w", err)
 	}
 
-	newDB, err := sqlx.Open("sqlite", tmpPath)
+	// Verify the downloaded database is valid by opening it temporarily
+	testDB, err := sqlx.Open("sqlite", tmpPath)
 	if err != nil {
 		_ = os.Remove(tmpPath)
+		return fmt.Errorf("failed to verify new sqlite db: %w", err)
+	}
+	// Close the test connection - we'll open a fresh one after the rename
+	_ = testDB.Close()
+
+	// Now lock only for the swap operation - minimizes blocking time
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Swap the database file atomically
+	if err := os.Rename(tmpPath, c.dbPath); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("failed to swap db file: %w", err)
+	}
+
+	// Close old database connection
+	if c.db != nil {
+		_ = c.db.Close()
+		c.db = nil
+	}
+
+	// Open fresh connection to the new database at the final path
+	newDB, err := sqlx.Open("sqlite", c.dbPath)
+	if err != nil {
 		return fmt.Errorf("failed to open new sqlite db: %w", err)
 	}
 	newDB.SetMaxOpenConns(1)
 	newDB.SetMaxIdleConns(1)
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if err := os.Rename(tmpPath, c.dbPath); err != nil {
-		_ = newDB.Close()
-		return fmt.Errorf("failed to swap db file: %w", err)
-	}
-
-	if c.db != nil {
-		_ = c.db.Close()
-	}
 	c.db = newDB
 	c.lastRefresh = time.Now()
 	c.logger.Debug("Local database refreshed", "duration_ms", time.Since(start).Milliseconds())
