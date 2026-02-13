@@ -50,6 +50,7 @@ func (r *Repository) GetWords(
 	deckID string,
 	form string,
 	formExact bool,
+	offset int,
 ) ([]wordRow, error) {
 	var query string
 	var params []any
@@ -105,8 +106,8 @@ func (r *Repository) GetWords(
 	}
 
 	if limit > 0 {
-		query += " LIMIT ?"
-		params = append(params, limit)
+		query += " LIMIT ? OFFSET ?"
+		params = append(params, limit, offset)
 	}
 
 	query += ";"
@@ -117,6 +118,87 @@ func (r *Repository) GetWords(
 	}
 
 	return words, nil
+}
+
+// CountWords counts total words matching the filters
+func (r *Repository) CountWords(
+	ctx context.Context,
+	client *MigakuClient,
+	lang, status string,
+	deckID string,
+	form string,
+	formExact bool,
+) (int, error) {
+	var query string
+	var params []any
+
+	if deckID != "" {
+		query = `SELECT COUNT(DISTINCT w.dictForm || w.secondary || w.partOfSpeech || w.language)
+			FROM WordList w
+			JOIN CardWordRelation cwr
+				ON w.dictForm = cwr.dictForm
+				AND w.secondary = cwr.secondary
+				AND w.partOfSpeech = cwr.partOfSpeech
+				AND w.language = cwr.language
+			JOIN card c ON cwr.cardId = c.id
+			WHERE w.del = 0 AND c.del = 0 AND c.deckId = ?`
+		params = append(params, deckID)
+	} else {
+		query = "SELECT COUNT(*) FROM WordList WHERE del = 0"
+	}
+
+	if lang != "" {
+		if deckID != "" {
+			query += " AND w.language = ?"
+		} else {
+			query += " AND language = ?"
+		}
+		params = append(params, lang)
+	}
+
+	if status != "" {
+		if deckID != "" {
+			query += " AND w.knownStatus = ?"
+		} else {
+			query += " AND knownStatus = ?"
+		}
+		params = append(params, status)
+	}
+
+	if form != "" {
+		match := form
+		operator := "LIKE"
+		if formExact {
+			operator = "="
+		} else {
+			match = "%" + form + "%"
+		}
+
+		if deckID != "" {
+			query += " AND (w.dictForm " + operator + " ? OR w.secondary " + operator + " ?)"
+		} else {
+			query += " AND (dictForm " + operator + " ? OR secondary " + operator + " ?)"
+		}
+		params = append(params, match, match)
+	}
+
+	query += ";"
+
+	row, err := runReadRow(ctx, client, query, params...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count words: %w", err)
+	}
+
+	for _, v := range row {
+		if count, ok := v.(int64); ok {
+			return int(count), nil
+		}
+		if count, ok := v.(int); ok {
+			return count, nil
+		}
+	}
+
+	return 0, nil
 }
 
 // GetDecks retrieves all active decks
@@ -187,7 +269,7 @@ func (r *Repository) GetDifficultWords(
 	deckID string,
 ) ([]difficultWordRow, error) {
 	var params []any
-	query := `SELECT 
+	query := `SELECT
 	            w.dictForm,
 	            w.secondary,
 	            w.partOfSpeech,

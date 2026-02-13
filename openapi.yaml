@@ -26,32 +26,32 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
             example:
               email: you@example.com
               password: yourpassword
       responses:
-        '200':
+        "200":
           description: Login successful
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
+                $ref: "#/components/schemas/LoginResponse"
               example:
                 api_key: "..."
                 message: Login successful
-        '400':
+        "400":
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /auth/logout:
     post:
       tags: [Auth]
@@ -59,20 +59,20 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Logout successful
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResponse'
+                $ref: "#/components/schemas/MessageResponse"
               example:
                 message: Logout successful
-        '401':
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/words:
     get:
       tags: [Words]
@@ -107,25 +107,46 @@ paths:
             type: boolean
             default: false
           description: If true, match exact; otherwise contains
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number for pagination
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 500
+          description: Number of items per page
       responses:
-        '200':
-          description: List of words
+        "200":
+          description: Paginated list of words
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Word'
+                $ref: "#/components/schemas/PaginatedWordsResponse"
               example:
-                - dictForm: "本"
-                  secondary: "ほん"
-                  knownStatus: "KNOWN"
-        '400':
+                data:
+                  - dictForm: "本"
+                    secondary: "ほん"
+                    knownStatus: "KNOWN"
+                pagination:
+                  page: 1
+                  page_size: 50
+                  total: 1500
+                  total_pages: 30
+                  has_next: true
+                  has_prev: false
+        "400":
           description: Invalid status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/words/status:
     post:
       tags: [Words]
@@ -137,7 +158,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WordStatusRequest'
+              $ref: "#/components/schemas/WordStatusRequest"
             examples:
               single:
                 value:
@@ -155,20 +176,20 @@ paths:
                     - wordText: "水"
                       secondary: "みず"
       responses:
-        '200':
+        "200":
           description: Status updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WordStatusResponse'
+                $ref: "#/components/schemas/MessageResponse"
               example:
-                ok: true
-        '400':
+                message: Word status updated successfully
+        "400":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/words/difficult:
     get:
       tags: [Words]
@@ -192,14 +213,14 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of difficult words
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/DifficultWord'
+                  $ref: "#/components/schemas/DifficultWord"
   /api/v1/decks:
     get:
       tags: [Decks]
@@ -207,14 +228,14 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: List of decks
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Deck'
+                  $ref: "#/components/schemas/Deck"
   /api/v1/status/counts:
     get:
       tags: [Counts]
@@ -231,14 +252,14 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Aggregated counts
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/StatusCounts'
+                  $ref: "#/components/schemas/StatusCounts"
   /api/v1/stats/words:
     get:
       tags: [Stats]
@@ -256,12 +277,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Aggregated counts
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StatusCounts'
+                $ref: "#/components/schemas/StatusCounts"
   /api/v1/stats/due:
     get:
       tags: [Stats]
@@ -284,12 +305,12 @@ paths:
             type: string
             description: One of 1 Month, 2 Months, 3 Months, 6 Months, 1 Year, All time
       responses:
-        '200':
+        "200":
           description: Due forecast
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DueStats'
+                $ref: "#/components/schemas/DueStats"
   /api/v1/stats/intervals:
     get:
       tags: [Stats]
@@ -312,12 +333,12 @@ paths:
             type: string
             description: e.g. 50th, 75th, 90th
       responses:
-        '200':
+        "200":
           description: Interval distribution
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IntervalStats'
+                $ref: "#/components/schemas/IntervalStats"
   /api/v1/stats/study:
     get:
       tags: [Stats]
@@ -340,12 +361,12 @@ paths:
             type: string
             description: One of 1 Month, 2 Months, 3 Months, 6 Months, 1 Year, All time
       responses:
-        '200':
+        "200":
           description: Study statistics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StudyStats'
+                $ref: "#/components/schemas/StudyStats"
   /dev/status:
     get:
       tags: [Dev]
@@ -353,12 +374,12 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Server status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DevStatus'
+                $ref: "#/components/schemas/DevStatus"
   /dev/tables:
     get:
       tags: [Dev]
@@ -366,14 +387,14 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Table list
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Table'
+                  $ref: "#/components/schemas/Table"
   /dev/database/schema:
     get:
       tags: [Dev]
@@ -381,7 +402,7 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Database schema
           content:
             application/json:
@@ -390,7 +411,7 @@ paths:
                 additionalProperties:
                   type: object
                   additionalProperties:
-                    $ref: '#/components/schemas/SchemaColumn'
+                    $ref: "#/components/schemas/SchemaColumn"
   /dev/cache/clear:
     post:
       tags: [Dev]
@@ -398,12 +419,12 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Cache cleared
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResponse'
+                $ref: "#/components/schemas/MessageResponse"
               example:
                 status: success
                 message: Cache cleared successfully
@@ -419,9 +440,9 @@ components:
       properties:
         error:
           type: string
-        message:
-          type: string
       required: [error]
+      example:
+        error: "word not found: emojiss"
     MessageResponse:
       type: object
       properties:
@@ -455,6 +476,38 @@ components:
         knownStatus:
           type: string
       required: [dictForm, secondary]
+    PaginatedWordsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Word"
+        pagination:
+          $ref: "#/components/schemas/PaginationMeta"
+      required: [data, pagination]
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page number
+        page_size:
+          type: integer
+          description: Number of items per page
+        total:
+          type: integer
+          description: Total number of items
+        total_pages:
+          type: integer
+          description: Total number of pages
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+        has_prev:
+          type: boolean
+          description: Whether there is a previous page
+      required: [page, page_size, total, total_pages, has_next, has_prev]
     WordStatusItem:
       type: object
       properties:
@@ -479,16 +532,11 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/WordStatusItem'
+            $ref: "#/components/schemas/WordStatusItem"
       required: [status]
       description: |
         When items is provided, the batch update is used. Otherwise, wordText is required.
-    WordStatusResponse:
-      type: object
-      properties:
-        ok:
-          type: boolean
-      required: [ok]
+
     DifficultWord:
       type: object
       properties:

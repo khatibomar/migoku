@@ -61,7 +61,23 @@ func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
 		formExact = parsedExact
 	}
 
-	words, err := app.service.GetWords(r.Context(), client, lang, status, deckID, form, formExact)
+	// Parse pagination parameters
+	pagination := parsePaginationParams(r)
+
+	// Get total count
+	total, err := app.service.CountWords(r.Context(), client, lang, status, deckID, form, formExact)
+	if err != nil {
+		if err.Error() == "invalid status: must be one of: known, learning, unknown, ignored" {
+			app.writeJSONError(w, r, http.StatusBadRequest, "Status must be one of: known, learning, unknown, ignored")
+			return
+		}
+		app.logger.Error("Failed to count words", "error", err, "status", status)
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Get paginated words
+	words, err := app.service.GetWords(r.Context(), client, lang, status, deckID, form, formExact, pagination.PageSize, pagination.Offset)
 	if err != nil {
 		if err.Error() == "invalid status: must be one of: known, learning, unknown, ignored" {
 			app.writeJSONError(w, r, http.StatusBadRequest, "Status must be one of: known, learning, unknown, ignored")
@@ -72,7 +88,7 @@ func (app *Application) handleWords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.respondJSON(w, r, words)
+	app.respondPaginated(w, r, words, pagination, total)
 }
 
 func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Request) {

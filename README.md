@@ -78,16 +78,27 @@ make docker-run
 
 <!-- endpoints-end -->
 
-## Cache
+## Features
 
+### Pagination
+- Available on `/api/v1/words` endpoint
+- Query parameters: `page` (default: 1) and `page_size` (default: 50, max: 500)
+- Response includes pagination metadata: `page`, `page_size`, `total`, `total_pages`, `has_next`, `has_prev`
+- Example: `/api/v1/words?page=2&page_size=100`
+
+### Cache
 - In-memory caching with 5-minute default TTL
 - Automatic refresh on expiry
 - Configurable via API or environment
 
+### Unified API Response Format
+- Success responses return data directly
+- Error responses have consistent structure: `{"error": "message"}`
+- HTTP status codes indicate success (2xx) or error (4xx/5xx)
+
 ## Upcoming
 
 - rate limiting
-- paginating
 - more endpoints
 - refactoring
 - bug fixes as they occur

@@ -135,6 +135,7 @@ func (s *MigakuService) GetWords(
 	client *MigakuClient,
 	lang, status, deckID, form string,
 	formExact bool,
+	limit, offset int,
 ) ([]Word, error) {
 	if status != "" && status != statusKnown && status != statusLearning && status != statusUnknown && status != statusIgnored {
 		return nil, errors.New("invalid status: must be one of: known, learning, unknown, ignored")
@@ -184,12 +185,13 @@ func (s *MigakuService) GetWords(
 		}
 	}
 
-	limit := 0
-	if dbStatus == "" {
-		limit = 10000
+	if limit == 0 {
+		if dbStatus == "" {
+			limit = 10000
+		}
 	}
 
-	rows, err := s.repo.GetWords(ctx, client, lang, dbStatus, limit, deckID, form, formExact)
+	rows, err := s.repo.GetWords(ctx, client, lang, dbStatus, limit, deckID, form, formExact, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -198,6 +200,34 @@ func (s *MigakuService) GetWords(
 	s.cache.Set(cacheKey, words)
 
 	return words, nil
+}
+
+// CountWords counts words matching the filters
+func (s *MigakuService) CountWords(
+	ctx context.Context,
+	client *MigakuClient,
+	lang, status, deckID, form string,
+	formExact bool,
+) (int, error) {
+	if status != "" && status != statusKnown && status != statusLearning && status != statusUnknown && status != statusIgnored {
+		return 0, errors.New("invalid status: must be one of: known, learning, unknown, ignored")
+	}
+
+	var dbStatus string
+	if status != "" {
+		switch status {
+		case statusKnown:
+			dbStatus = "KNOWN"
+		case statusLearning:
+			dbStatus = "LEARNING"
+		case statusUnknown:
+			dbStatus = "UNKNOWN"
+		case statusIgnored:
+			dbStatus = "IGNORED"
+		}
+	}
+
+	return s.repo.CountWords(ctx, client, lang, dbStatus, deckID, form, formExact)
 }
 
 // GetDecks retrieves all decks with caching
@@ -501,7 +531,7 @@ func (s *MigakuService) GetDueStats(ctx context.Context, client *MigakuClient, l
 	}
 
 	dateRows, err := runQuery[currentDateRow](ctx, client, `
-SELECT entry 
+SELECT entry
 FROM keyValue
 WHERE key = 'study.activeDay.currentDate';`)
 	if err == nil && len(dateRows) > 0 && dateRows[0].Entry != "" {
@@ -843,7 +873,7 @@ WHERE ct.lang = ? AND r.del = 0`
 	}
 
 	studyQuery := `
-SELECT 
+SELECT
   COUNT(DISTINCT r.day) as days_studied,
   COUNT(*) as total_reviews
 FROM review r
@@ -854,7 +884,7 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0`
 
 	// #nosec G101 -- SQL query string, no credentials.
 	passRateQuery := `
-SELECT 
+SELECT
   SUM(CASE WHEN r.type = 2 THEN 1 ELSE 0 END) as successful_reviews,
   SUM(CASE WHEN r.type = 1 THEN 1 ELSE 0 END) as failed_reviews
 FROM review r
@@ -864,7 +894,7 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type IN (1, 2)`
 	passRateParams := []any{lang, startDayNumber, currentDayNumber}
 
 	newCardsQuery := `
-SELECT 
+SELECT
   COUNT(DISTINCT r.cardId) as new_cards_reviewed
 FROM review r
 JOIN card c ON r.cardId = c.id
@@ -873,7 +903,7 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type = 0`
 	newCardsParams := []any{lang, startDayNumber, currentDayNumber}
 
 	cardsAddedQuery := `
-SELECT 
+SELECT
   COUNT(*) as cards_added
 FROM card c
 JOIN card_type ct ON c.cardTypeId = ct.id
@@ -884,17 +914,17 @@ WHERE ct.lang = ? AND c.created >= ? AND c.created <= ? AND c.del = 0 AND c.less
 	cardsAddedParams := []any{lang, startDayDate.UnixMilli(), time.Now().UnixMilli()}
 
 	cardsLearnedQuery := `
-SELECT 
+SELECT
   COUNT(DISTINCT c.id) as cards_learned
 FROM review r
 JOIN card c ON r.cardId = c.id
 JOIN card_type ct ON c.cardTypeId = ct.id
-WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 
+WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0
   AND c.interval >= 20 AND r.interval < 20 AND r.type = 2`
 	cardsLearnedParams := []any{lang, startDayNumber, currentDayNumber}
 
 	totalNewCardsQuery := `
-SELECT 
+SELECT
   COUNT(DISTINCT r.cardId) as total_new_cards
 FROM review r
 JOIN card c ON r.cardId = c.id
@@ -903,17 +933,17 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND c.del = 0 AND r.del = 0 AND r.ty
 	totalNewCardsParams := []any{lang, startDayNumber, currentDayNumber}
 
 	cardsLearnedPerDayQuery := `
-SELECT 
+SELECT
   ROUND(COUNT(DISTINCT c.id) * 1.0 / NULLIF(COUNT(DISTINCT r.day), 0), 1) as cards_learned_per_day
 FROM review r
 JOIN card c ON r.cardId = c.id
 JOIN card_type ct ON c.cardTypeId = ct.id
-WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 
+WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0
   AND c.interval >= 20 AND r.interval < 20 AND r.type = 2`
 	cardsLearnedPerDayParams := []any{lang, startDayNumber, currentDayNumber}
 
 	newCardsTimeQuery := `
-SELECT 
+SELECT
   SUM(r.duration) as total_time_seconds,
   COUNT(*) as review_count,
   ROUND(AVG(r.duration), 1) as avg_time_seconds
@@ -924,7 +954,7 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type = 0`
 	newCardsTimeParams := []any{lang, startDayNumber, currentDayNumber}
 
 	reviewsTimeQuery := `
-SELECT 
+SELECT
   SUM(r.duration) as total_time_seconds,
   COUNT(*) as review_count,
   ROUND(AVG(r.duration), 1) as avg_time_seconds
