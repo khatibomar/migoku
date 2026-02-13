@@ -17,17 +17,17 @@ type PaginationParams struct {
 }
 
 type PaginatedResponse struct {
-	Data       any              `json:"data"`
-	Pagination PaginationMeta   `json:"pagination"`
+	Data       any            `json:"data"`
+	Pagination PaginationMeta `json:"pagination"`
 }
 
 type PaginationMeta struct {
-	Page      int  `json:"page"`
-	PageSize  int  `json:"page_size"`
-	Total     int  `json:"total,omitempty"`
-	TotalPages int `json:"total_pages,omitempty"`
-	HasNext   bool `json:"has_next"`
-	HasPrev   bool `json:"has_prev"`
+	Page       int  `json:"page"`
+	PageSize   int  `json:"page_size"`
+	Total      int  `json:"total,omitempty"`
+	TotalPages int  `json:"total_pages,omitempty"`
+	HasNext    bool `json:"has_next"`
+	HasPrev    bool `json:"has_prev"`
 }
 
 func parsePaginationParams(r *http.Request) PaginationParams {
@@ -41,10 +41,7 @@ func parsePaginationParams(r *http.Request) PaginationParams {
 	pageSize := defaultPageSize
 	if sizeStr := r.URL.Query().Get("page_size"); sizeStr != "" {
 		if s, err := strconv.Atoi(sizeStr); err == nil && s > 0 {
-			pageSize = s
-			if pageSize > maxPageSize {
-				pageSize = maxPageSize
-			}
+			pageSize = min(s, maxPageSize)
 		}
 	}
 

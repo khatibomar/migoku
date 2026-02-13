@@ -74,7 +74,7 @@ func (r *Repository) GetWords(
 		if deckID != "" {
 			query += " AND w.language = ?"
 		} else {
-			query += " AND language = ?"
+			query += languageFilterClause
 		}
 		params = append(params, lang)
 	}
@@ -151,7 +151,7 @@ func (r *Repository) CountWords(
 		if deckID != "" {
 			query += " AND w.language = ?"
 		} else {
-			query += " AND language = ?"
+			query += languageFilterClause
 		}
 		params = append(params, lang)
 	}

@@ -24,6 +24,11 @@ const (
 	statusUnknown  = "unknown"
 	statusIgnored  = "ignored"
 
+	dbStatusKnown    = "KNOWN"
+	dbStatusLearning = "LEARNING"
+	dbStatusUnknown  = "UNKNOWN"
+	dbStatusIgnored  = "IGNORED"
+
 	cacheAllKey = "all"
 
 	periodAllTime = "All time"
@@ -175,13 +180,13 @@ func (s *MigakuService) GetWords(
 	if status != "" {
 		switch status {
 		case statusKnown:
-			dbStatus = "KNOWN"
+			dbStatus = dbStatusKnown
 		case statusLearning:
-			dbStatus = "LEARNING"
+			dbStatus = dbStatusLearning
 		case statusUnknown:
-			dbStatus = "UNKNOWN"
+			dbStatus = dbStatusUnknown
 		case statusIgnored:
-			dbStatus = "IGNORED"
+			dbStatus = dbStatusIgnored
 		}
 	}
 
@@ -217,13 +222,13 @@ func (s *MigakuService) CountWords(
 	if status != "" {
 		switch status {
 		case statusKnown:
-			dbStatus = "KNOWN"
+			dbStatus = dbStatusKnown
 		case statusLearning:
-			dbStatus = "LEARNING"
+			dbStatus = dbStatusLearning
 		case statusUnknown:
-			dbStatus = "UNKNOWN"
+			dbStatus = dbStatusUnknown
 		case statusIgnored:
-			dbStatus = "IGNORED"
+			dbStatus = dbStatusIgnored
 		}
 	}
 
