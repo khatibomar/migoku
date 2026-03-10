@@ -43,11 +43,6 @@ type loginRequest struct {
 }
 
 func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		app.writeJSONError(w, r, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	var req loginRequest
