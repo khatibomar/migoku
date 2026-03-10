@@ -73,8 +73,8 @@ make docker-run
 | POST | /auth/logout | Logout and close the client session | Auth |
 | POST | /dev/cache/clear | Clear the in-memory cache | Dev |
 | GET | /dev/database/schema | Get complete database schema | Dev |
+| GET | /dev/database/tables | List all database tables | Dev |
 | GET | /dev/status | Get server status and configuration | Dev |
-| GET | /dev/tables | List all database tables | Dev |
 
 <!-- endpoints-end -->
 
