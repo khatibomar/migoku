@@ -23,8 +23,10 @@ const (
 	migakuPresignedURLService = "https://srs-db-presigned-url-service-api.migaku.com/db-force-sync-download-url"
 )
 
-var defaultHTTPClient = &http.Client{Timeout: 30 * time.Second}
-var downloadHTTPClient = &http.Client{} // no timeout; rely on context for cancellation
+var (
+	defaultHTTPClient  = &http.Client{Timeout: 30 * time.Second}
+	downloadHTTPClient = &http.Client{} // no timeout; rely on context for cancellation
+)
 
 type FirebaseAuthToken struct {
 	mu           sync.Mutex
