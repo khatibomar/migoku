@@ -108,10 +108,11 @@ func realMain(logger *slog.Logger) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", chainMiddlewares(app.handleRoot, app.corsMiddleware))
-	mux.HandleFunc("/docs", chainMiddlewares(app.handleDocs, app.corsMiddleware))
-	mux.HandleFunc("/openapi.yaml", chainMiddlewares(app.handleOpenAPISpec, app.corsMiddleware))
-	mux.HandleFunc("/auth/login", chainMiddlewares(app.handleLogin, app.corsMiddleware))
-	mux.HandleFunc("/auth/logout", chainMiddlewares(app.handleLogout, app.corsMiddleware, app.authMiddleware))
+	mux.HandleFunc("GET /docs", chainMiddlewares(app.handleDocs, app.corsMiddleware))
+	mux.HandleFunc("GET /openapi.yaml", chainMiddlewares(app.handleOpenAPISpec, app.corsMiddleware))
+	mux.HandleFunc("POST /auth/login", chainMiddlewares(app.handleLogin, app.corsMiddleware))
+	mux.HandleFunc("POST /auth/logout", chainMiddlewares(app.handleLogout, app.corsMiddleware, app.authMiddleware))
+
 	v1 := http.NewServeMux()
 	v1.HandleFunc("GET /words", chainMiddlewares(app.handleWords, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("POST /words/status", chainMiddlewares(app.handleSetWordStatus, app.corsMiddleware, app.authMiddleware))
@@ -122,16 +123,14 @@ func realMain(logger *slog.Logger) error {
 	v1.HandleFunc("GET /stats/due", chainMiddlewares(app.handleDueStats, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("GET /stats/intervals", chainMiddlewares(app.handleIntervalStats, app.corsMiddleware, app.authMiddleware))
 	v1.HandleFunc("GET /stats/study", chainMiddlewares(app.handleStudyStats, app.corsMiddleware, app.authMiddleware))
-
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
 
-	utility := http.NewServeMux()
-	utility.HandleFunc("GET /status", chainMiddlewares(app.handleStatus, app.corsMiddleware, app.authMiddleware))
-	utility.HandleFunc("GET /database/schema", chainMiddlewares(app.handleDatabaseSchema, app.corsMiddleware, app.authMiddleware))
-	utility.HandleFunc("POST /cache/clear", chainMiddlewares(app.handleClearCache, app.corsMiddleware, app.authMiddleware))
-	utility.HandleFunc("GET /tables", chainMiddlewares(app.handleTables, app.corsMiddleware, app.authMiddleware))
-
-	mux.Handle("/dev/", http.StripPrefix("/dev", utility))
+	dev := http.NewServeMux()
+	dev.HandleFunc("GET /status", chainMiddlewares(app.handleStatus, app.corsMiddleware))
+	dev.HandleFunc("POST /cache/clear", chainMiddlewares(app.handleClearCache, app.corsMiddleware))
+	dev.HandleFunc("GET /database/schema", chainMiddlewares(app.handleDatabaseSchema, app.corsMiddleware, app.authMiddleware))
+	dev.HandleFunc("GET /database/tables", chainMiddlewares(app.handleTables, app.corsMiddleware, app.authMiddleware))
+	mux.Handle("/dev/", http.StripPrefix("/dev", dev))
 
 	logger.Info("Server starting", "url", "http://localhost:"+port)
 	logger.Info("Cache TTL", "ttl", cache.ttl.String())

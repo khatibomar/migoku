@@ -371,8 +371,6 @@ paths:
     get:
       tags: [Dev]
       summary: Get server status and configuration
-      security:
-        - ApiKeyAuth: []
       responses:
         "200":
           description: Server status
@@ -380,7 +378,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DevStatus"
-  /dev/tables:
+  /dev/database/tables:
     get:
       tags: [Dev]
       summary: List all database tables
@@ -416,8 +414,6 @@ paths:
     post:
       tags: [Dev]
       summary: Clear the in-memory cache
-      security:
-        - ApiKeyAuth: []
       responses:
         "200":
           description: Cache cleared
