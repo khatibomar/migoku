@@ -107,29 +107,29 @@ func realMain(logger *slog.Logger) error {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", chainMiddlewares(app.handleRoot, app.corsMiddleware))
-	mux.HandleFunc("GET /docs", chainMiddlewares(app.handleDocs, app.corsMiddleware))
-	mux.HandleFunc("GET /openapi.yaml", chainMiddlewares(app.handleOpenAPISpec, app.corsMiddleware))
-	mux.HandleFunc("POST /auth/login", chainMiddlewares(app.handleLogin, app.corsMiddleware))
-	mux.HandleFunc("POST /auth/logout", chainMiddlewares(app.handleLogout, app.corsMiddleware, app.authMiddleware))
+	mux.HandleFunc("/", app.handleRoot)
+	mux.HandleFunc("GET /docs", app.handleDocs)
+	mux.HandleFunc("GET /openapi.yaml", app.handleOpenAPISpec)
+	mux.HandleFunc("POST /auth/login", app.handleLogin)
+	mux.HandleFunc("POST /auth/logout", chainMiddlewares(app.handleLogout, app.authMiddleware))
 
 	v1 := http.NewServeMux()
-	v1.HandleFunc("GET /words", chainMiddlewares(app.handleWords, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("POST /words/status", chainMiddlewares(app.handleSetWordStatus, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("GET /decks", chainMiddlewares(app.handleDecks, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("GET /status/counts", chainMiddlewares(app.handleStatusCounts, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("GET /words/difficult", chainMiddlewares(app.handleDifficultWords, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("GET /stats/words", chainMiddlewares(app.handleWordStats, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("GET /stats/due", chainMiddlewares(app.handleDueStats, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("GET /stats/intervals", chainMiddlewares(app.handleIntervalStats, app.corsMiddleware, app.authMiddleware))
-	v1.HandleFunc("GET /stats/study", chainMiddlewares(app.handleStudyStats, app.corsMiddleware, app.authMiddleware))
+	v1.HandleFunc("GET /words", chainMiddlewares(app.handleWords, app.authMiddleware))
+	v1.HandleFunc("POST /words/status", chainMiddlewares(app.handleSetWordStatus, app.authMiddleware))
+	v1.HandleFunc("GET /decks", chainMiddlewares(app.handleDecks, app.authMiddleware))
+	v1.HandleFunc("GET /status/counts", chainMiddlewares(app.handleStatusCounts, app.authMiddleware))
+	v1.HandleFunc("GET /words/difficult", chainMiddlewares(app.handleDifficultWords, app.authMiddleware))
+	v1.HandleFunc("GET /stats/words", chainMiddlewares(app.handleWordStats, app.authMiddleware))
+	v1.HandleFunc("GET /stats/due", chainMiddlewares(app.handleDueStats, app.authMiddleware))
+	v1.HandleFunc("GET /stats/intervals", chainMiddlewares(app.handleIntervalStats, app.authMiddleware))
+	v1.HandleFunc("GET /stats/study", chainMiddlewares(app.handleStudyStats, app.authMiddleware))
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
 
 	dev := http.NewServeMux()
-	dev.HandleFunc("GET /status", chainMiddlewares(app.handleStatus, app.corsMiddleware))
-	dev.HandleFunc("POST /cache/clear", chainMiddlewares(app.handleClearCache, app.corsMiddleware))
-	dev.HandleFunc("GET /database/schema", chainMiddlewares(app.handleDatabaseSchema, app.corsMiddleware, app.authMiddleware))
-	dev.HandleFunc("GET /database/tables", chainMiddlewares(app.handleTables, app.corsMiddleware, app.authMiddleware))
+	dev.HandleFunc("GET /status", app.handleStatus)
+	dev.HandleFunc("POST /cache/clear", app.handleClearCache)
+	dev.HandleFunc("GET /database/schema", chainMiddlewares(app.handleDatabaseSchema, app.authMiddleware))
+	dev.HandleFunc("GET /database/tables", chainMiddlewares(app.handleTables, app.authMiddleware))
 	mux.Handle("/dev/", http.StripPrefix("/dev", dev))
 
 	logger.Info("Server starting", "url", "http://localhost:"+port)
@@ -137,7 +137,7 @@ func realMain(logger *slog.Logger) error {
 
 	server := &http.Server{
 		Addr:              ":" + port,
-		Handler:           mux,
+		Handler:           app.corsHandler(mux),
 		ReadHeaderTimeout: 30 * time.Second,
 		ReadTimeout:       60 * time.Second,
 		WriteTimeout:      60 * time.Second,

@@ -1,7 +1,7 @@
-.PHONY: run build clean docker-run lint
+.PHONY: run build clean docker-run lint examples
 
 # Run the API server
-run:
+run: build
 	@echo "Starting Migoku API Server..."
 	LOG_LEVEL=debug API_SECRET="top-secret" go run ./...
 
@@ -24,3 +24,12 @@ clean:
 # Run linting
 lint:
 	golangci-lint run --config .golangci.yml
+
+# Serve static HTML examples from ./examples
+# Open in browser:
+#   http://localhost:4173/stats-dashboard/
+#   http://localhost:4173/ai-study-coach/
+examples:
+	@echo "Serving static examples on http://localhost:4173"
+	@echo "Open /stats-dashboard/ or /ai-study-coach/"
+	cd examples && python3 -m http.server 4173
