@@ -5,8 +5,11 @@ import (
 	"slices"
 )
 
-func (app *Application) corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// corsHandler wraps the top-level mux so that OPTIONS preflight requests
+// are answered with the correct headers before Go 1.22's method-constrained
+// routes ("GET /foo") can reject them with 405.
+func (app *Application) corsHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if len(app.cors) == 0 || (len(app.cors) == 1 && app.cors[0] == "*") {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		} else {
@@ -16,11 +19,11 @@ func (app *Application) corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			}
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Api-Key, Authorization")
 		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		next(w, r)
-	}
+		next.ServeHTTP(w, r)
+	})
 }

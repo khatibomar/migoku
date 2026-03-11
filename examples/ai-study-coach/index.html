@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vocab Notebook — Migoku × Gemini</title>
+  <style>
+    :root {
+      --bg:       #171512;
+      --surface:  #1f1c17;
+      --surface2: #272318;
+      --border:   rgba(212,168,83,0.11);
+      --accent:   #d4a853;
+      --adim:     rgba(212,168,83,0.14);
+      --blue:     #7eb8c9;
+      --text:     #e8e0cf;
+      --muted:    #8a8070;
+      --danger:   #e07070;
+      --success:  #7ec8a0;
+      --sb-w:     230px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Georgia, 'Times New Roman', serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    a { color: inherit; }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+    #v-notebook.active { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* ── Setup ── */
+    .setup-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    .setup-card {
+      width: 100%; max-width: 540px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 1.5rem; padding: 2.5rem;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+    }
+    .setup-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: var(--adim); border: 1px solid rgba(212,168,83,0.28);
+      border-radius: 2rem; padding: 0.25rem 0.9rem;
+      font-size: 0.67rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent);
+      font-family: 'Segoe UI', system-ui, sans-serif; margin-bottom: 1rem;
+    }
+    .setup-title {
+      font-size: 2.1rem; font-weight: 400; line-height: 1.15;
+      background: linear-gradient(135deg, var(--accent) 0%, #e8c878 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 0.4rem;
+    }
+    .setup-sub {
+      color: var(--muted); font-size: 0.88rem; line-height: 1.65;
+      font-family: 'Segoe UI', system-ui, sans-serif; margin-bottom: 1.75rem;
+    }
+    .setup-sub em { color: #c8b888; font-style: italic; }
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.875rem; }
+    @media (max-width: 480px) { .g2 { grid-template-columns: 1fr; } }
+    .field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.875rem; }
+    .field label {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--muted);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .field input, .field select {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 0.6rem; padding: 0.65rem 0.9rem;
+      color: var(--text); font-size: 0.9rem; outline: none;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      transition: border-color 0.2s;
+    }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
+    .field input::placeholder { color: rgba(138,128,112,0.5); }
+    .field select option { background: var(--surface2); }
+    .range-row { display: flex; align-items: center; gap: 0.875rem; }
+    .range-row input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+    .rval {
+      background: var(--adim); border: 1px solid rgba(212,168,83,0.28);
+      border-radius: 0.35rem; padding: 0.15rem 0.6rem;
+      font-size: 0.875rem; font-weight: 700; color: var(--accent);
+      min-width: 2.4rem; text-align: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+      padding: 0.72rem 1.6rem; border-radius: 0.7rem; border: none;
+      font-size: 0.92rem; font-weight: 700; cursor: pointer;
+      font-family: 'Segoe UI', system-ui, sans-serif; transition: all 0.2s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #b87030 100%);
+      color: #18140a; box-shadow: 0 4px 20px rgba(212,168,83,0.28);
+    }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(212,168,83,0.42); }
+    .btn-ghost {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: rgba(212,168,83,0.28); color: var(--text); }
+    .btn-sm { padding: 0.38rem 0.8rem; font-size: 0.78rem; border-radius: 0.45rem; }
+    .btn-block { width: 100%; margin-top: 1.25rem; }
+    .err-box {
+      background: rgba(224,112,112,0.08); border: 1px solid rgba(224,112,112,0.25);
+      border-radius: 0.6rem; padding: 0.7rem 1rem;
+      color: #f0a0a0; font-size: 0.84rem; margin-top: 0.875rem;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .free-note {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: rgba(126,200,160,0.07); border: 1px solid rgba(126,200,160,0.2);
+      border-radius: 0.6rem; padding: 0.6rem 0.875rem;
+      font-size: 0.78rem; color: #90c8a8;
+      font-family: 'Segoe UI', system-ui, sans-serif; margin-bottom: 0.875rem;
+    }
+
+    /* ── Loading ── */
+    .loading-wrap {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1.5rem; padding: 2rem; text-align: center;
+    }
+    .quill { font-size: 3.5rem; animation: sway 1.6s ease-in-out infinite alternate; }
+    @keyframes sway {
+      from { transform: rotate(-10deg) translate(-5px, 5px); }
+      to   { transform: rotate(10deg)  translate(5px, -5px); }
+    }
+    .load-title { font-size: 1.4rem; color: var(--accent); }
+    .load-sub {
+      color: var(--muted); font-size: 0.85rem; max-width: 320px; line-height: 1.65;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .dots span {
+      display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent); margin: 0 3px;
+    }
+    .dots span:nth-child(1) { animation: dot 1.2s 0.0s ease-in-out infinite; }
+    .dots span:nth-child(2) { animation: dot 1.2s 0.2s ease-in-out infinite; }
+    .dots span:nth-child(3) { animation: dot 1.2s 0.4s ease-in-out infinite; }
+    @keyframes dot { 0%,80%,100%{opacity:.15;transform:scale(.65)} 40%{opacity:1;transform:scale(1)} }
+
+    /* ── Notebook layout ── */
+    .nb-topbar {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.8rem 1.5rem; background: var(--surface);
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
+      flex-shrink: 0;
+    }
+    .nb-logo {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 1.05rem; color: var(--accent); flex-shrink: 0;
+    }
+    .nb-logo span { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 0.72rem; color: var(--muted); }
+    .nb-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.875rem; flex-wrap: wrap; }
+    .nb-stat { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 0.72rem; color: var(--muted); }
+    .nb-stat strong { color: var(--text); font-size: 0.88rem; }
+    .nb-body { display: flex; flex: 1; overflow: hidden; }
+
+    /* Sidebar */
+    .nb-sidebar {
+      width: var(--sb-w); flex-shrink: 0;
+      background: var(--surface); border-right: 1px solid var(--border);
+      overflow-y: auto; display: flex; flex-direction: column;
+    }
+    .sb-head {
+      padding: 1rem 1.1rem 0.4rem;
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+      font-family: 'Segoe UI', system-ui, sans-serif; flex-shrink: 0;
+    }
+    .toc-item {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.48rem 1.1rem; cursor: pointer; transition: background 0.15s;
+      border-left: 2px solid transparent; flex-shrink: 0;
+    }
+    .toc-item:hover { background: var(--adim); }
+    .toc-item.hi { border-left-color: var(--accent); background: var(--adim); }
+    .toc-word { font-size: 0.95rem; flex: 1; min-width: 0; }
+    .toc-rate {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 0.66rem; font-weight: 700; padding: 0.1rem 0.38rem;
+      border-radius: 3px; flex-shrink: 0;
+    }
+    .rh { background: rgba(224,112,112,0.15); color: #f09090; }
+    .rm { background: rgba(245,177,80,0.15);  color: #f0b860; }
+    .rl { background: rgba(126,200,160,0.15); color: #90c8a8; }
+    @media (max-width: 680px) { .nb-sidebar { display: none; } }
+
+    /* Main content */
+    .nb-main { flex: 1; overflow-y: auto; padding: 2rem; }
+    .nb-main-inner { max-width: 800px; }
+
+    /* Section divider */
+    .sec-div {
+      display: flex; align-items: center; gap: 0.875rem; margin-bottom: 1.25rem;
+    }
+    .sec-label {
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent);
+      font-family: 'Segoe UI', system-ui, sans-serif; flex-shrink: 0;
+    }
+    .sec-rule { flex: 1; height: 1px; background: var(--border); }
+
+    /* Story card */
+    .story-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 1.25rem; padding: 2rem 2.25rem; margin-bottom: 2.5rem;
+    }
+    .story-heading {
+      font-size: 1.3rem; color: var(--accent); font-style: italic;
+      margin-bottom: 1rem;
+    }
+    .story-body {
+      font-size: 1.03rem; line-height: 1.9; color: #d0c8b5;
+    }
+    .story-body mark {
+      background: rgba(212,168,83,0.17); color: var(--accent);
+      border-radius: 0.2em; padding: 0.03em 0.22em;
+      font-weight: 700; font-style: normal;
+    }
+
+    /* Entry cards */
+    .entries-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: 1.125rem; margin-bottom: 3rem;
+    }
+    @media (max-width: 700px) { .entries-grid { grid-template-columns: 1fr; } }
+    .entry-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 1.1rem; overflow: hidden; scroll-margin-top: 72px;
+      transition: border-color 0.2s;
+    }
+    .entry-card:hover { border-color: rgba(212,168,83,0.28); }
+    .entry-hdr {
+      padding: 1rem 1.2rem 0.875rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem;
+    }
+    .entry-word { font-size: 1.55rem; font-weight: 400; line-height: 1; }
+    .entry-reading {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 0.78rem; color: var(--muted); margin-top: 0.28rem;
+    }
+    .entry-meta-col { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; flex-shrink: 0; }
+    .entry-pos {
+      font-family: 'Segoe UI', system-ui, sans-serif; font-size: 0.65rem; color: var(--blue);
+      background: rgba(126,184,201,0.09); border: 1px solid rgba(126,184,201,0.2);
+      border-radius: 0.3rem; padding: 0.1rem 0.42rem;
+    }
+    .entry-rate {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 0.72rem; font-weight: 700; padding: 0.14rem 0.5rem; border-radius: 0.35rem;
+    }
+    .entry-body { padding: 0.875rem 1.2rem; display: flex; flex-direction: column; gap: 0.8rem; }
+    .nb-sec-head {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.09em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem;
+    }
+    .nb-sec-body {
+      font-size: 0.855rem; line-height: 1.72; color: #c0b8a8;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .box-anchor  { background: rgba(212,168,83,0.07);  border-left: 2px solid rgba(212,168,83,0.4);  border-radius: 0 0.5rem 0.5rem 0; padding: 0.55rem 0.8rem; }
+    .box-usage   { background: rgba(126,184,201,0.06); border-left: 2px solid rgba(126,184,201,0.38); border-radius: 0 0.5rem 0.5rem 0; padding: 0.55rem 0.8rem; }
+    .box-trap    { background: rgba(224,112,112,0.06); border-left: 2px solid rgba(224,112,112,0.35); border-radius: 0 0.5rem 0.5rem 0; padding: 0.55rem 0.8rem; }
+    .box-insight { background: rgba(126,200,160,0.06); border-left: 2px solid rgba(126,200,160,0.35); border-radius: 0 0.5rem 0.5rem 0; padding: 0.55rem 0.8rem; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(4rem);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 0.6rem; padding: 0.6rem 1.25rem;
+      font-size: 0.84rem; font-family: 'Segoe UI', system-ui, sans-serif;
+      color: var(--text); pointer-events: none; z-index: 9999;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ SETUP ═══ -->
+  <div id="v-setup" class="view active">
+    <div class="setup-wrap">
+      <div class="setup-card">
+        <div class="setup-badge">📔 Migoku × Gemini</div>
+        <h1 class="setup-title">Vocab Notebook</h1>
+        <p class="setup-sub">
+          Your SRS fail data + Gemini AI = a notebook that <em>explains why you keep forgetting</em> each word,
+          weaves them into a story, and gives you the memory hooks to finally make them stick.
+        </p>
+
+        <div class="free-note">
+          ✅ Uses free Gemini model only: gemini-2.5-flash — get key at
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>
+        </div>
+
+        <div class="g2">
+          <div class="field">
+            <label>Migoku API Key</label>
+            <input type="password" id="migoku-key" placeholder="X-Api-Key" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label>Gemini API Key</label>
+            <input type="password" id="gemini-key" placeholder="From AI Studio" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="g2">
+          <div class="field">
+            <label>Language</label>
+            <select id="lang-select">
+              <option value="ja">🇯🇵 Japanese</option>
+              <option value="zh">🇨🇳 Chinese</option>
+              <option value="ko">🇰🇷 Korean</option>
+              <option value="es">🇪🇸 Spanish</option>
+              <option value="fr">🇫🇷 French</option>
+              <option value="de">🇩🇪 German</option>
+              <option value="it">🇮🇹 Italian</option>
+              <option value="pt">🇵🇹 Portuguese</option>
+              <option value="ru">🇷🇺 Russian</option>
+              <option value="custom">✏️ Other…</option>
+            </select>
+          </div>
+          <div class="field" id="custom-field" style="display:none;">
+            <label>Language Code</label>
+            <input type="text" id="custom-lang" placeholder="e.g. nl, sv, ar" maxlength="8" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Words to analyse</label>
+          <div class="range-row">
+            <input type="range" id="word-count" min="5" max="20" value="8" step="1" />
+            <span class="rval" id="word-count-val">8</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Migoku Server URL</label>
+          <input type="text" id="server-url" value="http://localhost:8080" />
+        </div>
+
+        <div id="setup-err"></div>
+        <button class="btn btn-primary btn-block" onclick="generate()">📝 Generate My Notebook</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LOADING ═══ -->
+  <div id="v-loading" class="view">
+    <div class="loading-wrap">
+      <div class="quill">🪶</div>
+      <div class="load-title">Writing your notebook…</div>
+      <div class="load-sub" id="load-msg">Fetching your hardest words from Migoku</div>
+      <div class="dots"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
+  <!-- ═══ NOTEBOOK ═══ -->
+  <div id="v-notebook" class="view">
+    <div class="nb-topbar">
+      <div class="nb-logo">📔 <span>Vocab Notebook</span></div>
+      <div class="nb-topbar-right">
+        <div class="nb-stat"><strong id="stat-words">—</strong> words</div>
+        <div class="nb-stat">avg fail <strong id="stat-avg">—</strong></div>
+        <button class="btn btn-ghost btn-sm" onclick="showView('v-setup')">← Back</button>
+        <button class="btn btn-ghost btn-sm" onclick="generate()">⟳ Regenerate</button>
+      </div>
+    </div>
+
+    <div class="nb-body">
+      <nav class="nb-sidebar">
+        <div class="sb-head">Contents</div>
+        <div class="toc-item hi" onclick="scrollTop()">
+          <span style="font-size:.9rem">📖</span>
+          <span style="font-family:'Segoe UI',sans-serif;font-size:.8rem;">Story</span>
+        </div>
+        <div id="toc-list"></div>
+      </nav>
+
+      <div class="nb-main" id="nb-main">
+        <div class="nb-main-inner">
+          <div class="sec-div">
+            <span class="sec-label">Today's Story</span>
+            <div class="sec-rule"></div>
+          </div>
+          <div class="story-card">
+            <div class="story-heading" id="story-title"></div>
+            <div class="story-body"  id="story-body"></div>
+          </div>
+
+          <div class="sec-div">
+            <span class="sec-label">Notebook Entries</span>
+            <div class="sec-rule"></div>
+          </div>
+          <div class="entries-grid" id="entries-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const LANG_NAMES = {
+  ja:'Japanese', zh:'Chinese (Mandarin)', ko:'Korean', es:'Spanish',
+  fr:'French', de:'German', it:'Italian', pt:'Portuguese', ru:'Russian',
+};
+
+const FREE_GEMINI_MODEL = 'gemini-2.5-flash';
+const FREE_GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${FREE_GEMINI_MODEL}:generateContent`;
+
+const S = { migokuKey:'', geminiKey:'', lang:'ja', serverUrl:'', wordCount:8, words:[] };
+
+// ── View ──────────────────────────────────────────────────────
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(id);
+  el.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function scrollTop() { document.getElementById('nb-main').scrollTo({ top: 0, behavior: 'smooth' }); }
+
+// ── Bindings ──────────────────────────────────────────────────
+document.getElementById('word-count').addEventListener('input', function() {
+  document.getElementById('word-count-val').textContent = this.value;
+});
+document.getElementById('lang-select').addEventListener('change', function() {
+  document.getElementById('custom-field').style.display = this.value === 'custom' ? 'flex' : 'none';
+});
+
+// ── Helpers ───────────────────────────────────────────────────
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showErr(msg) {
+  document.getElementById('setup-err').innerHTML = `<div class="err-box">⚠ ${esc(msg)}</div>`;
+}
+function setLoad(msg) { document.getElementById('load-msg').textContent = msg; }
+function rateClass(r) { return r >= 65 ? 'rh' : r >= 40 ? 'rm' : 'rl'; }
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── Main flow ─────────────────────────────────────────────────
+async function generate() {
+  const migokuKey = document.getElementById('migoku-key').value.trim();
+  const geminiKey = document.getElementById('gemini-key').value.trim();
+  const langSel   = document.getElementById('lang-select').value;
+  const lang      = langSel === 'custom' ? document.getElementById('custom-lang').value.trim() : langSel;
+  const serverUrl = document.getElementById('server-url').value.trim().replace(/\/+$/, '');
+  const wordCount = parseInt(document.getElementById('word-count').value, 10);
+
+  document.getElementById('setup-err').innerHTML = '';
+  if (!migokuKey) { showErr('Migoku API key is required.'); return; }
+  if (!geminiKey) { showErr('Gemini API key is required.'); return; }
+  if (!lang)      { showErr('Enter a language code.'); return; }
+
+  Object.assign(S, { migokuKey, geminiKey, lang, serverUrl, wordCount });
+  showView('v-loading');
+  setLoad('Fetching your hardest words from Migoku…');
+
+  let words;
+  try {
+    const res = await fetch(
+      `${serverUrl}/api/v1/words/difficult?lang=${encodeURIComponent(lang)}&limit=${wordCount}`,
+      { headers: { 'X-Api-Key': migokuKey } }
+    );
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`Migoku API error ${res.status}: ${body || 'no details'}`);
+    }
+    words = await res.json();
+    if (!Array.isArray(words) || words.length === 0)
+      throw new Error('No difficult words found yet — need ≥ 5 reviews per word.');
+  } catch (e) {
+    showView('v-setup'); showErr(e.message); return;
+  }
+
+  S.words = words;
+  setLoad(`Asking Gemini (${FREE_GEMINI_MODEL}) to write your notebook for ${words.length} words…`);
+
+  let notebook;
+  try {
+    notebook = await callGemini(words, lang);
+  } catch (e) {
+    showView('v-setup'); showErr(`Gemini error: ${e.message}`); return;
+  }
+
+  renderNotebook(words, notebook);
+  showView('v-notebook');
+}
+
+// ── Gemini ────────────────────────────────────────────────────
+async function callGemini(words, lang) {
+  const langName = LANG_NAMES[lang] || lang;
+  const list = words.map((w, i) =>
+    `${i+1}. ${w.dictForm}${w.secondary ? ` (${w.secondary})` : ''} [${w.partOfSpeech || 'word'}] — ${w.fail_rate}% fail rate across ${w.total_reviews} reviews`
+  ).join('\n');
+
+  const prompt = `You are a creative language-learning expert. A student is learning ${langName} and keeps struggling with these specific words, ranked by difficulty:
+
+${list}
+
+Write them a rich, personalised vocabulary notebook. Return ONLY a valid JSON object — no markdown fences, no commentary:
+
+{
+  "story": {
+    "title": "5-word-max evocative title",
+    "text": "A vivid, memorable 3-4 sentence story written in English. Weave in ALL ${langName} words naturally — write each one in its original script and wrap it in [[ ]] so I can highlight it (e.g. [[食べる]]). The story should be interesting enough to re-read."
+  },
+  "entries": [
+    {
+      "word": "exact ${langName} word as listed above",
+      "anchor": "1-2 sentence memory hook: link the word's sound or visual shape to its meaning through a vivid image or tiny story",
+      "usage": "How native speakers actually use this word. Include one short ${langName} example sentence with an English translation in parentheses.",
+      "trap": "The specific mistake most English-speakers make with this word — be concrete, not generic",
+      "insight": "One surprising, counterintuitive, or culturally fascinating fact about this word"
+    }
+  ]
+}
+
+Include exactly one entry for every word above, in the same order.`;
+
+  const res = await fetch(
+    `${FREE_GEMINI_URL}?key=${S.geminiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.7,
+          maxOutputTokens: 4096,
+          thinkingConfig: {
+            thinkingBudget: 0,
+          },
+        },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const msg = err.error?.message || `HTTP ${res.status}`;
+    if (/quota|rate|429/i.test(msg)) {
+      throw new Error('Free Gemini quota/rate limit reached. Wait a bit, then try again.');
+    }
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  const finishReason = data.candidates?.[0]?.finishReason;
+  if (finishReason === 'MAX_TOKENS') {
+    throw new Error('Gemini truncated output (MAX_TOKENS). Lower “Words to analyse” and try again.');
+  }
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error('Empty response from Gemini');
+  return parseNotebookJSON(raw);
+}
+
+function parseNotebookJSON(raw) {
+  const cleaned = String(raw || '').trim();
+  const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const payload = (fenced ? fenced[1] : cleaned).trim();
+  try {
+    return JSON.parse(payload);
+  } catch {
+    const start = payload.indexOf('{');
+    const end = payload.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) {
+      throw new Error('Gemini did not return valid JSON. Try again.');
+    }
+    return JSON.parse(payload.slice(start, end + 1));
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────
+function renderNotebook(words, nb) {
+  const avg = (words.reduce((s, w) => s + w.fail_rate, 0) / words.length).toFixed(0);
+  document.getElementById('stat-words').textContent = words.length;
+  document.getElementById('stat-avg').textContent   = avg + '%';
+
+  // Story
+  document.getElementById('story-title').textContent = nb.story?.title || '';
+  let html = esc(nb.story?.text || '');
+  html = html.replace(/\[\[([^\]]+)\]\]/g, (_, w) => `<mark>${esc(w)}</mark>`);
+  document.getElementById('story-body').innerHTML = html;
+
+  // TOC + entries
+  const tocEl   = document.getElementById('toc-list');
+  const gridEl  = document.getElementById('entries-grid');
+  tocEl.innerHTML = gridEl.innerHTML = '';
+
+  (nb.entries || []).forEach((entry, i) => {
+    const w  = words[i] || {};
+    const rc = rateClass(w.fail_rate ?? 50);
+    const id = `e${i}`;
+
+    tocEl.innerHTML += `
+      <div class="toc-item" onclick="scrollToEntry('${id}')">
+        <span class="toc-word">${esc(entry.word)}</span>
+        <span class="toc-rate ${rc}">${w.fail_rate ?? '—'}%</span>
+      </div>`;
+
+    gridEl.innerHTML += `
+      <div class="entry-card" id="${id}">
+        <div class="entry-hdr">
+          <div>
+            <div class="entry-word">${esc(entry.word)}</div>
+            <div class="entry-reading">${esc(w.secondary || '')}</div>
+          </div>
+          <div class="entry-meta-col">
+            ${w.partOfSpeech ? `<span class="entry-pos">${esc(w.partOfSpeech)}</span>` : ''}
+            <span class="entry-rate ${rc}">${w.fail_rate ?? '—'}% fail</span>
+          </div>
+        </div>
+        <div class="entry-body">
+          <div>
+            <div class="nb-sec-head">🔗 Memory Anchor</div>
+            <div class="box-anchor nb-sec-body">${esc(entry.anchor)}</div>
+          </div>
+          <div>
+            <div class="nb-sec-head">📝 How It's Really Used</div>
+            <div class="box-usage nb-sec-body">${esc(entry.usage)}</div>
+          </div>
+          <div>
+            <div class="nb-sec-head">⚠ Common Trap</div>
+            <div class="box-trap nb-sec-body">${esc(entry.trap)}</div>
+          </div>
+          <div>
+            <div class="nb-sec-head">✨ Insight</div>
+            <div class="box-insight nb-sec-body">${esc(entry.insight)}</div>
+          </div>
+        </div>
+      </div>`;
+  });
+}
+
+function scrollToEntry(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior:'smooth', block:'start' });
+  document.querySelectorAll('.toc-item').forEach(el => el.classList.remove('hi'));
+  document.querySelector(`.toc-item[onclick="scrollToEntry('${id}')"]`)?.classList.add('hi');
+}
+
+</script>
+</body>
+</html>

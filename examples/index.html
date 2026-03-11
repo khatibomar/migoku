@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Migoku · Examples</title>
+  <style>
+    :root {
+      --bg:      #0f0e0c;
+      --surface: #1a1710;
+      --border:  rgba(212,168,83,0.13);
+      --accent:  #d4a853;
+      --adim:    rgba(212,168,83,0.10);
+      --text:    #e8e0cf;
+      --muted:   #8a8070;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 3.5rem 1.5rem;
+    }
+
+    .wrap { width: 100%; max-width: 720px; }
+
+    /* ── Header ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: var(--adim); border: 1px solid rgba(212,168,83,0.28);
+      border-radius: 2rem; padding: 0.22rem 0.85rem;
+      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 2.4rem; font-weight: 400; line-height: 1.1;
+      background: linear-gradient(135deg, var(--accent) 0%, #e8c878 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 0.5rem;
+    }
+    .sub {
+      color: var(--muted); font-size: 0.9rem; line-height: 1.6;
+      margin-bottom: 2.5rem;
+    }
+
+    /* ── Cards grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.125rem;
+    }
+
+    .card {
+      display: flex; flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      padding: 1.6rem 1.75rem;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.2s, transform 0.18s, box-shadow 0.18s;
+    }
+    .card:hover {
+      border-color: rgba(212,168,83,0.38);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+    }
+
+    .card-icon {
+      font-size: 2rem; margin-bottom: 1rem; line-height: 1;
+    }
+    .card-name {
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--text); margin-bottom: 0.45rem;
+    }
+    .card:hover .card-name { color: var(--accent); }
+    .card-desc {
+      font-size: 0.84rem; color: var(--muted);
+      line-height: 1.6; flex: 1;
+    }
+    .card-arrow {
+      margin-top: 1.25rem;
+      font-size: 0.78rem; font-weight: 700;
+      color: var(--accent); letter-spacing: 0.04em;
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+
+    /* ── Footer ── */
+    .footer-note {
+      margin-top: 1.75rem;
+      padding: 0.75rem 1.1rem;
+      background: rgba(126,200,160,0.05);
+      border: 1px solid rgba(126,200,160,0.16);
+      border-radius: 0.75rem;
+      font-size: 0.8rem; color: #90c8a8; line-height: 1.55;
+    }
+    .footer-note code {
+      background: rgba(126,200,160,0.12); border-radius: 0.3rem;
+      padding: 0.05rem 0.35rem; font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="badge">🌸 migoku</div>
+  <h1>Examples</h1>
+  <p class="sub">Pick an example — it opens right in your browser. Fill in your API keys on the page.</p>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="footer-note">
+    Serve locally with <code>make examples</code> → <code>http://localhost:4173/</code>
+  </div>
+</div>
+
+<script>
+  const EXAMPLES = [
+    {
+      slug: 'ai-study-coach',
+      name: 'AI Study Coach',
+      icon: '📔',
+      desc: 'Your worst SRS words + Gemini AI = a personalised vocab notebook that explains why you keep forgetting each word.',
+    },
+    {
+      slug: 'stats-dashboard',
+      name: 'Stats Dashboard',
+      icon: '📊',
+      desc: 'Live breakdown of known, learning, unknown and ignored words for any language in your Migaku deck.',
+    },
+  ];
+
+  const grid = document.getElementById('grid');
+
+  EXAMPLES.forEach(ex => {
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = `${ex.slug}/`;
+    a.innerHTML = `
+      <div class="card-icon">${ex.icon}</div>
+      <div class="card-name">${ex.name}</div>
+      <div class="card-desc">${ex.desc}</div>
+      <div class="card-arrow">Open example →</div>`;
+    grid.appendChild(a);
+  });
+</script>
+</body>
+</html>
