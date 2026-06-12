@@ -445,15 +445,21 @@ func setDiscordNickname(token, guildID, nick string) error {
 }
 
 func formatInt(n int) string {
-	s := strconv.Itoa(n)
-	out := make([]byte, 0, len(s)+len(s)/3)
-	for i := range s {
-		if i > 0 && (len(s)-i)%3 == 0 {
-			out = append(out, ',')
+	const M = 1_000_000
+	const K = 1_000
+	if n >= M {
+		if n%M == 0 {
+			return strconv.Itoa(n/M) + "M"
 		}
-		out = append(out, s[i])
+		return strconv.FormatFloat(float64(n)/M, 'f', 1, 64) + "M"
 	}
-	return string(out)
+	if n >= K {
+		if n%K == 0 {
+			return strconv.Itoa(n/K) + "k"
+		}
+		return strconv.FormatFloat(float64(n)/K, 'f', 1, 64) + "k"
+	}
+	return strconv.Itoa(n)
 }
 
 func readLine(reader *bufio.Reader) string {
