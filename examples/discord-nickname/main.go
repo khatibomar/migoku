@@ -35,6 +35,7 @@ var langEmoji = map[string]string{
 	"nl": "\U0001F1F3\U0001F1F1",
 	"pl": "\U0001F1F5\U0001F1F1",
 	"tr": "\U0001F1F9\U0001F1F7",
+	"en": "\U0001F1FA\U0001F1F8",
 }
 
 type Config struct {
@@ -42,7 +43,6 @@ type Config struct {
 	MigokuKey    string `json:"migoku_api_key"`
 	DiscordToken string `json:"discord_token"`
 	DiscordName  string `json:"discord_name"`
-	Lang         string `json:"lang"`
 	GuildID      string `json:"guild_id"`
 	NickTemplate string `json:"nick_template"`
 	Interval     string `json:"interval"`
@@ -87,6 +87,10 @@ func main() {
 		log.Fatal("No configuration found. Run with -i to set up interactively.")
 	}
 
+	if len(extractLangCodes(cfg.NickTemplate)) == 0 {
+		log.Fatal("Template must include at least one language code (e.g. {ja}). Re-run with -i to reconfigure.")
+	}
+
 	interval, err := time.ParseDuration(cfg.Interval)
 	if err != nil {
 		interval = 1 * time.Hour
@@ -94,7 +98,6 @@ func main() {
 
 	log.Printf("Starting Discord nickname updater")
 	log.Printf("  Migoku:    %s", cfg.MigokuURL)
-	log.Printf("  Language:  %s", cfg.Lang)
 	log.Printf("  Guild:     %s", cfg.GuildID)
 	log.Printf("  Interval:  %s", interval)
 
@@ -186,17 +189,17 @@ func runSetup(configPath string) *Config {
 	cfg.GuildID = guilds[choice-1].ID
 	fmt.Printf("Selected: %s\n", guilds[choice-1].Name)
 
-	fmt.Print("Language code (ja, zh, es, fr, de, ko, etc.) [ja]: ")
-	lang := readLine(reader)
-	if lang == "" {
-		lang = "ja"
-	}
-	cfg.Lang = strings.ToLower(strings.TrimSpace(lang))
-
-	fmt.Printf("Nickname template [%s]:\n", cfg.NickTemplate)
-	fmt.Println("  Available placeholders: {name} {emoji} {lang} {known} {learning} {total}")
-	if input := readLine(reader); input != "" {
-		cfg.NickTemplate = input
+	for {
+		fmt.Printf("Nickname template [%s]:\n", cfg.NickTemplate)
+		fmt.Println("  Placeholders: {name} {emoji} {lang} {known} {learning} {total}")
+		fmt.Println("  Use language codes (e.g. {ja} {en}) in the template to switch languages")
+		if input := readLine(reader); input != "" {
+			cfg.NickTemplate = input
+		}
+		if len(extractLangCodes(cfg.NickTemplate)) > 0 {
+			break
+		}
+		fmt.Println("  Template must include at least one language code (e.g. {ja})")
 	}
 
 	fmt.Printf("Update interval (e.g. 30m, 1h, 6h) [%s]: ", cfg.Interval)
@@ -211,31 +214,119 @@ func runSetup(configPath string) *Config {
 	return cfg
 }
 
+type langCount struct {
+	known    int
+	learning int
+}
+
 func updateNickname(cfg *Config) error {
-	known, learning, err := fetchWordCounts(cfg.MigokuURL, cfg.MigokuKey, cfg.Lang)
-	if err != nil {
-		return fmt.Errorf("fetch word counts: %w", err)
+	langCodes := extractLangCodes(cfg.NickTemplate)
+
+	langCounts := make(map[string]langCount, len(langCodes))
+	seen := make(map[string]bool)
+	for _, lc := range langCodes {
+		if seen[lc] {
+			continue
+		}
+		seen[lc] = true
+
+		known, learning, err := fetchWordCounts(cfg.MigokuURL, cfg.MigokuKey, lc)
+		if err != nil {
+			return fmt.Errorf("fetch word counts for %s: %w", lc, err)
+		}
+		langCounts[lc] = langCount{known, learning}
 	}
 
-	currentNick := cfg.DiscordName
-
-	total := known + learning
-	emoji := langEmoji[cfg.Lang]
-
-	newNick := cfg.NickTemplate
-	newNick = strings.ReplaceAll(newNick, "{name}", currentNick)
-	newNick = strings.ReplaceAll(newNick, "{emoji}", emoji)
-	newNick = strings.ReplaceAll(newNick, "{lang}", strings.ToUpper(cfg.Lang))
-	newNick = strings.ReplaceAll(newNick, "{known}", formatInt(known))
-	newNick = strings.ReplaceAll(newNick, "{learning}", formatInt(learning))
-	newNick = strings.ReplaceAll(newNick, "{total}", formatInt(total))
+	newNick := renderTemplate(cfg.NickTemplate, cfg.DiscordName, langCounts)
 
 	if err := setDiscordNickname(cfg.DiscordToken, cfg.GuildID, newNick); err != nil {
 		return fmt.Errorf("set discord nickname: %w", err)
 	}
 
-	log.Printf("Nickname updated: %s (known=%d learning=%d total=%d)", newNick, known, learning, total)
+	log.Printf("Nickname updated: %s", newNick)
 	return nil
+}
+
+func extractLangCodes(tmpl string) []string {
+	knownPH := map[string]bool{
+		"name": true, "emoji": true, "lang": true,
+		"known": true, "learning": true, "total": true,
+	}
+	var langs []string
+	seen := map[string]bool{}
+
+	for i := 0; i < len(tmpl); i++ {
+		if tmpl[i] != '{' {
+			continue
+		}
+		end := strings.IndexByte(tmpl[i+1:], '}')
+		if end == -1 {
+			break
+		}
+		token := tmpl[i+1 : i+1+end]
+		if !knownPH[token] && !seen[token] {
+			langs = append(langs, token)
+			seen[token] = true
+		}
+		i += end
+	}
+	return langs
+}
+
+func renderTemplate(tmpl, name string, langCounts map[string]langCount) string {
+	var out strings.Builder
+	var currentLang string
+
+	i := 0
+	for i < len(tmpl) {
+		bs := strings.IndexByte(tmpl[i:], '{')
+		if bs == -1 {
+			out.WriteString(tmpl[i:])
+			break
+		}
+		out.WriteString(tmpl[i : i+bs])
+		be := strings.IndexByte(tmpl[i+bs+1:], '}')
+		if be == -1 {
+			out.WriteString(tmpl[i+bs:])
+			break
+		}
+		token := tmpl[i+bs+1 : i+bs+1+be]
+
+		switch token {
+		case "name":
+			out.WriteString(name)
+		case "emoji":
+			if e, ok := langEmoji[currentLang]; ok && currentLang != "" {
+				out.WriteString(e)
+			}
+		case "lang":
+			out.WriteString(strings.ToUpper(currentLang))
+		case "known":
+			if c, ok := langCounts[currentLang]; ok {
+				out.WriteString(formatInt(c.known))
+			}
+		case "learning":
+			if c, ok := langCounts[currentLang]; ok {
+				out.WriteString(formatInt(c.learning))
+			}
+		case "total":
+			if c, ok := langCounts[currentLang]; ok {
+				out.WriteString(formatInt(c.known + c.learning))
+			}
+		default:
+			if _, ok := langCounts[token]; ok {
+				currentLang = token
+			} else {
+				out.WriteByte('{')
+				out.WriteString(token)
+				out.WriteByte('}')
+			}
+		}
+
+		i = i + bs + be + 2
+	}
+
+	return out.String()
 }
 
 var errConfigNotFound = errors.New("config not found")

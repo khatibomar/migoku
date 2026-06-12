@@ -34,8 +34,22 @@ Config is saved to `~/.config/migoku-discord-nickname.json`.
 
 ## Template examples
 
+The template supports these placeholders:
+
+| Placeholder | Description |
+|---|---|
+| `{name}` | Your Discord display name |
+| `{emoji}` | Flag emoji for the current language |
+| `{lang}` | Uppercase language code (e.g., `JA`, `ZH`, `EN`) |
+| `{known}` | Known word count (comma-formatted) |
+| `{learning}` | Learning word count |
+| `{total}` | Known + Learning total |
+| `{ja}` `{zh}` `{en}` | Language code as a placeholder — switches the current language for subsequent tokens |
+
 | Template | Result |
 |---|---|
-| `{name} \| {emoji}{lang} {known}` | `Ayn \| 🇯🇵JA 1,234` |
-| `{name} 🎓 {known}/{total}` | `Ayn 🎓 1,234/1,500` |
-| `{name} 📖 {learning} ✅ {known}` | `Ayn 📖 56 ✅ 1,234` |
+| `{name} \| {emoji}{lang} {known}` | `Ayn 🇯🇵JA 1,234` |
+| `{emoji}{lang} 🎓 {known}/{total}` | `🇯🇵JA 🎓 1,234/1,500` |
+| `📖 {learning} ✅ {known}` | `📖 56 ✅ 1,234` |
+| `{ja}{emoji}{lang} {known} {en}{emoji}{lang} {known}` | `🇯🇵JA 1,234 🇺🇸EN 5,678` |
+| `{name} \| {de}{emoji}{lang} {total} · {ja}{emoji}{lang} {total}` | `Ayn 🇩🇪DE 890 · 🇯🇵JA 1,500` |
