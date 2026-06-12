@@ -165,8 +165,8 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 		}
 
 		app.respondJSON(w, r, map[string]any{
-			"message": "Word status updated successfully",
-			"count":   len(items),
+			msgKey:  "Word status updated successfully",
+			"count": len(items),
 		})
 		return
 	}
@@ -206,7 +206,7 @@ func (app *Application) handleSetWordStatus(w http.ResponseWriter, r *http.Reque
 	}
 
 	app.respondJSON(w, r, map[string]string{
-		"message": "Word status updated successfully",
+		msgKey: "Word status updated successfully",
 	})
 }
 
@@ -447,7 +447,7 @@ func (app *Application) handleClearCache(w http.ResponseWriter, r *http.Request)
 	app.cache.Clear()
 	app.logger.Info("Cache cleared")
 	app.respondJSON(w, r, map[string]string{
-		"status":  "success",
-		"message": "Cache cleared successfully",
+		"status": "success",
+		msgKey:   "Cache cleared successfully",
 	})
 }

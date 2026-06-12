@@ -67,7 +67,7 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if _, exists := app.accounts[apiKey]; exists {
 		if err := encode(w, r, http.StatusOK, map[string]string{
 			"api_key": apiKey,
-			"message": "Already logged in",
+			msgKey:    "Already logged in",
 		}); err != nil {
 			app.logger.Error("Failed to encode JSON response", "error", err)
 		}
@@ -90,7 +90,7 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 	app.accounts[apiKey] = db
 	if err := encode(w, r, http.StatusOK, map[string]string{
 		"api_key": apiKey,
-		"message": "Login successful",
+		msgKey:    "Login successful",
 	}); err != nil {
 		app.logger.Error("Failed to encode JSON response", "error", err)
 	}
@@ -120,7 +120,7 @@ func (app *Application) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 	delete(app.accounts, apiKey)
 	if err := encode(w, r, http.StatusOK, map[string]string{
-		"message": "Logout successful",
+		msgKey: "Logout successful",
 	}); err != nil {
 		app.logger.Error("Failed to encode JSON response", "error", err)
 	}

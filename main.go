@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -100,7 +101,7 @@ func realMain(logger *slog.Logger) error {
 
 	//--- Start HTTP server ---
 	chainMiddlewares := func(handler http.HandlerFunc, middlewares ...func(http.HandlerFunc) http.HandlerFunc) http.HandlerFunc {
-		for i := len(middlewares) - 1; i >= 0; i-- {
+		for i := range slices.Backward(middlewares) {
 			handler = middlewares[i](handler)
 		}
 		return handler

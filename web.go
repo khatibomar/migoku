@@ -10,6 +10,7 @@ import (
 
 const (
 	msgInternalServerError = "Internal server error"
+	msgKey                 = "message"
 )
 
 // ErrorResponse represents error details in error responses
