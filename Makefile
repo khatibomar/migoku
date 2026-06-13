@@ -1,4 +1,4 @@
-.PHONY: run build clean docker-run lint examples unikraft-build unikraft-run unikraft-update
+.PHONY: run build clean docker-run lint examples unikraft-run unikraft-update
 
 # Run the API server
 run: build
@@ -36,21 +36,19 @@ examples:
 
 # Unikraft deployment
 
-unikraft-build:
-	@if [ -z "$(UNIKRAFT_ORG)" ]; then echo "ERROR: UNIKRAFT_ORG is not set"; exit 1; fi
-	@if ! ps -a | grep -q buildkitd; then echo "ERROR: buildkitd is not running — start it with 'sudo buildkitd'"; exit 1; fi
-	@echo "Building Unikraft image..."
-	unikraft build . --output $(UNIKRAFT_ORG)/migoku:latest
-
 unikraft-run:
+	@if ! ps -a | grep -q buildkitd; then echo "ERROR: buildkitd is not running — start it with 'sudo buildkitd'"; exit 1; fi
 	@if [ -z "$(UNIKRAFT_ORG)" ]; then echo "ERROR: UNIKRAFT_ORG is not set"; exit 1; fi
 	@if [ -z "$(API_SECRET)" ]; then echo "ERROR: API_SECRET is not set"; exit 1; fi
 	@echo "Deploying Unikraft image..."
 	unikraft run --metro fra -p 443:8080/tls+http -m 256M -e API_SECRET=$(API_SECRET) --image $(UNIKRAFT_ORG)/migoku:latest
 
 unikraft-update:
+	@if ! ps -a | grep -q buildkitd; then echo "ERROR: buildkitd is not running — start it with 'sudo buildkitd'"; exit 1; fi
+	@if [ -z "$(INSTANCE_NAME)" ]; then echo "ERROR: INSTANCE_NAME is not set"; exit 1; fi
 	@if [ -z "$(UNIKRAFT_ORG)" ]; then echo "ERROR: UNIKRAFT_ORG is not set"; exit 1; fi
-	$(MAKE) unikraft-build
+	@echo "Building Unikraft image..."
+	unikraft build . --output $(UNIKRAFT_ORG)/migoku:latest
 	@echo "Stopping Unikraft instance '$(INSTANCE_NAME)'..."
 	unikraft instances stop $(INSTANCE_NAME)
 	@echo "Updating Unikraft instance '$(INSTANCE_NAME)' with latest image..."

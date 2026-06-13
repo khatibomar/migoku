@@ -56,12 +56,17 @@ make docker-run
 
 ## Deploy on Unikraft Cloud
 
-```bash
-# Build the Unikraft image
-UNIKRAFT_ORG=<my-org> make unikraft-build
+To deploy run
 
-# Deploy on Unikraft Cloud
+```bash
 UNIKRAFT_ORG=<my-org> API_SECRET=<secret> make unikraft-run
+```
+
+To update existing instance run
+
+```bash
+# to get instance name: unikraft instance ls
+UNIKRAFT_ORG=<my-org> API_SECRET=<secret> INSTANCE_NAME=<instance-name> make unikraft-run
 ```
 
 Configuration (set in `Makefile` or as environment variables):
