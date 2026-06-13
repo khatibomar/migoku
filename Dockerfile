@@ -17,7 +17,6 @@ RUN addgroup -g 1000 app && \
 WORKDIR /app
 
 COPY --from=builder /app/migoku .
-COPY --from=builder /app/example ./example
 
 ARG LOG_LEVEL=info
 ARG PORT=8080

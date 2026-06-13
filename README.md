@@ -54,6 +54,20 @@ make clean
 make docker-run
 ```
 
+## Deploy on Unikraft Cloud
+
+```bash
+# Build the Unikraft image
+UNIKRAFT_ORG=<my-org> make unikraft-build
+
+# Deploy on Unikraft Cloud
+UNIKRAFT_ORG=<my-org> API_SECRET=<secret> make unikraft-run
+```
+
+Configuration (set in `Makefile` or as environment variables):
+- `UNIKRAFT_ORG` — Your organization name on [unikraft.cloud](https://console.unikraft.cloud)
+- `API_SECRET` — Secret used for API key signing
+
 ## Endpoints
 
 <!-- endpoints-start -->

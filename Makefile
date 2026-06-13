@@ -1,4 +1,4 @@
-.PHONY: run build clean docker-run lint examples
+.PHONY: run build clean docker-run lint examples unikraft-build unikraft-run
 
 # Run the API server
 run: build
@@ -33,3 +33,17 @@ examples:
 	@echo "Serving static examples on http://localhost:4173"
 	@echo "Open /stats-dashboard/ or /ai-study-coach/"
 	cd examples && python3 -m http.server 4173
+
+# Unikraft deployment
+
+unikraft-build:
+	@if [ -z "$(UNIKRAFT_ORG)" ]; then echo "ERROR: UNIKRAFT_ORG is not set"; exit 1; fi
+	@if ! ps -a | grep -q buildkitd; then echo "ERROR: buildkitd is not running — start it with 'sudo buildkitd'"; exit 1; fi
+	@echo "Building Unikraft image..."
+	unikraft build . --output $(UNIKRAFT_ORG)/migoku:latest
+
+unikraft-run:
+	@if [ -z "$(UNIKRAFT_ORG)" ]; then echo "ERROR: UNIKRAFT_ORG is not set"; exit 1; fi
+	@if [ -z "$(API_SECRET)" ]; then echo "ERROR: API_SECRET is not set"; exit 1; fi
+	@echo "Deploying Unikraft image..."
+	unikraft run --metro fra -p 443:8080/tls+http -m 256M -e API_SECRET=$(API_SECRET) --image $(UNIKRAFT_ORG)/migoku:latest
