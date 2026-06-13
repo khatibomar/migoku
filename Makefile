@@ -41,7 +41,7 @@ unikraft-run:
 	@if [ -z "$(UNIKRAFT_ORG)" ]; then echo "ERROR: UNIKRAFT_ORG is not set"; exit 1; fi
 	@if [ -z "$(API_SECRET)" ]; then echo "ERROR: API_SECRET is not set"; exit 1; fi
 	@echo "Deploying Unikraft image..."
-	unikraft run --metro fra -p 443:8080/tls+http -m 256M -e API_SECRET=$(API_SECRET) --image $(UNIKRAFT_ORG)/migoku:latest
+	unikraft run --metro fra -p 443:8080/tls+http -m 256M -e CACHE_TTL=12h -e API_SECRET=$(API_SECRET) --image $(UNIKRAFT_ORG)/migoku:latest
 
 unikraft-update:
 	@if ! ps -a | grep -q buildkitd; then echo "ERROR: buildkitd is not running — start it with 'sudo buildkitd'"; exit 1; fi
