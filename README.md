@@ -56,22 +56,54 @@ make docker-run
 
 ## Deploy on Unikraft Cloud
 
+create account in [unikraft](https://console.unikraft.cloud)
+
+then install unikraft cli
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
+```
+
+then login
+
+```bash
+unikraft login
+```
+
+to get the organization name run
+
+```bash
+λ ~/code/migoku/ main* unikraft profile list
+NAME          ACTIVE  METROS
+<my-org>      true    ["dal", "sin", "was", "fra", "sfo"]
+```
+
 To deploy run
 
 ```bash
 UNIKRAFT_ORG=<my-org> API_SECRET=<secret> make unikraft-run
 ```
 
+Configuration (set in `Makefile` or as environment variables):
+- `UNIKRAFT_ORG` — Your organization name on [unikraft.cloud](https://console.unikraft.cloud)
+- `API_SECRET` — Secret used for API key signing
+
 To update existing instance run
 
 ```bash
 # to get instance name: unikraft instance ls
-UNIKRAFT_ORG=<my-org> API_SECRET=<secret> INSTANCE_NAME=<instance-name> make unikraft-run
+UNIKRAFT_ORG=<my-org> API_SECRET=<secret> INSTANCE_NAME=<instance-name> make unikraft-update
 ```
 
-Configuration (set in `Makefile` or as environment variables):
-- `UNIKRAFT_ORG` — Your organization name on [unikraft.cloud](https://console.unikraft.cloud)
-- `API_SECRET` — Secret used for API key signing
+to get the API url run command
+
+```bash
+λ ~/code/migoku/ main unikraft instance ls
+METRO  NAME          STATE    IMAGE                ARGS  MEMORY  VCPUS  FQDN            CREATED
+fra    migoku-w9o44  running  omarelkhatib/migoku        256MiB  1      <URL-HERE>      18 hours ago
+```
+
+FQDN is API URL
 
 ## Endpoints
 
