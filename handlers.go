@@ -437,8 +437,23 @@ func (app *Application) handleOpenAPISpec(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	if fwd := r.Header.Get("X-Forwarded-Proto"); fwd != "" {
+		scheme = fwd
+	}
+
+	serverURL := app.serverURL
+	if serverURL == "" {
+		serverURL = scheme + "://" + r.Host
+	}
+
+	spec := strings.Replace(string(openAPISpec), "http://localhost:8080", serverURL, 1)
+
 	w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
-	if _, err := w.Write(openAPISpec); err != nil {
+	if _, err := w.Write([]byte(spec)); err != nil {
 		app.logger.Error("Failed to write OpenAPI spec", slog.String("error", err.Error()))
 	}
 }

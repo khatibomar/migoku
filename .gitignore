@@ -34,3 +34,4 @@ go.work.sum
 migoku
 bin
 .export
+.local

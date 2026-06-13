@@ -22,6 +22,7 @@ type Application struct {
 	port      int
 	cors      []string
 	secretKey string
+	serverURL string
 
 	accounts map[string]*MigakuClient
 }
@@ -85,12 +86,15 @@ func realMain(logger *slog.Logger) error {
 
 	logger.Info("Initializing client session...")
 
+	serverURL := os.Getenv("SERVER_URL")
+
 	app := &Application{
 		port:      portInt,
 		cors:      cors,
 		cache:     cache,
 		logger:    logger,
 		secretKey: secretKey,
+		serverURL: serverURL,
 		accounts:  make(map[string]*MigakuClient),
 	}
 

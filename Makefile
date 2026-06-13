@@ -1,4 +1,4 @@
-.PHONY: run build clean docker-run lint examples unikraft-build unikraft-run
+.PHONY: run build clean docker-run lint examples unikraft-build unikraft-run unikraft-update
 
 # Run the API server
 run: build
@@ -47,3 +47,13 @@ unikraft-run:
 	@if [ -z "$(API_SECRET)" ]; then echo "ERROR: API_SECRET is not set"; exit 1; fi
 	@echo "Deploying Unikraft image..."
 	unikraft run --metro fra -p 443:8080/tls+http -m 256M -e API_SECRET=$(API_SECRET) --image $(UNIKRAFT_ORG)/migoku:latest
+
+unikraft-update:
+	@if [ -z "$(UNIKRAFT_ORG)" ]; then echo "ERROR: UNIKRAFT_ORG is not set"; exit 1; fi
+	$(MAKE) unikraft-build
+	@echo "Stopping Unikraft instance '$(INSTANCE_NAME)'..."
+	unikraft instances stop $(INSTANCE_NAME)
+	@echo "Updating Unikraft instance '$(INSTANCE_NAME)' with latest image..."
+	unikraft instances edit $(INSTANCE_NAME) --image $(UNIKRAFT_ORG)/migoku:latest
+	@echo "Starting Unikraft instance '$(INSTANCE_NAME)'..."
+	unikraft instances start $(INSTANCE_NAME)
