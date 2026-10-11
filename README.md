@@ -105,6 +105,22 @@ fra    migoku-w9o44  running  omarelkhatib/migoku        256MiB  1      <URL-HER
 
 FQDN is API URL
 
+### Deploy Discord Nickname Updater on Unikraft
+
+You can also deploy the Discord Nickname updater (`examples/discord-nickname`) as a standalone unikernel:
+
+```bash
+# Build and run with your credentials
+UNIKRAFT_ORG=<my-org> \
+DISCORD_TOKEN=<token> \
+MIGOKU_API_KEY=<api-key> \
+GUILD_ID=<server-id> \
+MIGOKU_URL=https://<migoku-fqdn> \
+make unikraft-discord-run
+```
+
+Or configure environment variables directly in the Unikraft Cloud dashboard. See [`examples/discord-nickname/README.md`](file:///home/ayn/code/migoku/examples/discord-nickname/README.md) for full details.
+
 ## Endpoints
 
 <!-- endpoints-start -->
