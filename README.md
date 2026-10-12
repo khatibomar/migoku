@@ -121,6 +121,15 @@ make unikraft-discord-run
 
 Or configure environment variables directly in the Unikraft Cloud dashboard. See [`examples/discord-nickname/README.md`](file:///home/ayn/code/migoku/examples/discord-nickname/README.md) for full details.
 
+### Android Home Screen Widget
+
+A home screen widget for Android that connects to the Migoku API to display Japanese learning progress (known and learning counts) with the official Migaku avatar. Includes both a native Kotlin AppWidget project and a browser simulator. See [`examples/android-widget/README.md`](file:///home/ayn/code/migoku/examples/android-widget/README.md).
+
+```bash
+# Preview static examples and widget simulator in browser:
+make examples
+```
+
 ## Endpoints
 
 <!-- endpoints-start -->

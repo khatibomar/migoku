@@ -29,9 +29,10 @@ lint:
 # Open in browser:
 #   http://localhost:4173/stats-dashboard/
 #   http://localhost:4173/ai-study-coach/
+#   http://localhost:4173/android-widget/
 examples:
 	@echo "Serving static examples on http://localhost:4173"
-	@echo "Open /stats-dashboard/ or /ai-study-coach/"
+	@echo "Open /stats-dashboard/, /ai-study-coach/, or /android-widget/"
 	cd examples && python3 -m http.server 4173
 
 # Unikraft deployment

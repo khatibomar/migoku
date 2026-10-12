@@ -1,0 +1,9 @@
+<resources>
+    <color name="bg_dark">#121212</color>
+    <color name="card_bg">#1A1815</color>
+    <color name="accent_gold">#D4A853</color>
+    <color name="stat_known">#4ADE80</color>
+    <color name="stat_learning">#FBBF24</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#9E9E9E</color>
+</resources>

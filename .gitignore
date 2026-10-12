@@ -31,7 +31,15 @@ go.work.sum
 # .idea/
 # .vscode/
 
-migoku
+/migoku
 bin
 .export
 .local
+
+# Android & Gradle
+.gradle/
+build/
+**/build/
+local.properties
+*.apk
+*.aab

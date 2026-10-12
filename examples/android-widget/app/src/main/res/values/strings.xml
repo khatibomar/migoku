@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Migoku Widget</string>
+    <string name="widget_description">Displays your Japanese learning progress (known and learning counts) with Migaku avatar.</string>
+</resources>
