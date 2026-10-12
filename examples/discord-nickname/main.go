@@ -77,7 +77,7 @@ func main() {
 	interactive := flag.Bool("i", false, "run interactively to set up")
 	flag.Parse()
 
-	cfg, _ := loadConfigAndEnv(*configPath)
+	cfg := loadConfigAndEnv(*configPath)
 
 	if *interactive {
 		cfg = runSetup(cfg, *configPath)
@@ -134,9 +134,8 @@ func getEnvAny(keys ...string) string {
 	return ""
 }
 
-func loadConfigAndEnv(configPath string) (*Config, bool) {
+func loadConfigAndEnv(configPath string) *Config {
 	var cfg *Config
-	loadedFromFile := false
 
 	targetPath := configPath
 	if targetPath == "" {
@@ -146,7 +145,6 @@ func loadConfigAndEnv(configPath string) (*Config, bool) {
 	c, err := loadConfig(targetPath)
 	if err == nil {
 		cfg = c
-		loadedFromFile = true
 	} else if configPath != "" && !errors.Is(err, errConfigNotFound) {
 		log.Printf("Warning: failed to read config file %s: %v", configPath, err)
 	}
@@ -189,7 +187,7 @@ func loadConfigAndEnv(configPath string) (*Config, bool) {
 		cfg.Interval = v
 	}
 
-	return cfg, loadedFromFile
+	return cfg
 }
 
 func validateAndResolveConfig(cfg *Config) error {
@@ -199,7 +197,8 @@ func validateAndResolveConfig(cfg *Config) error {
 			log.Println("Auto-detected active Discord token from local Discord client")
 			tryPersistConfigToken(cfg)
 		} else {
-			return errors.New("DISCORD_TOKEN is required (set via DISCORD_TOKEN environment variable, config file, or have Discord app logged in)")
+			return errors.New("DISCORD_TOKEN is required (set via DISCORD_TOKEN environment variable, " +
+				"config file, or have Discord app logged in)")
 		}
 	}
 
@@ -425,7 +424,8 @@ func updateNickname(cfg *Config) error {
 	err := setDiscordNickname(cfg.DiscordToken, cfg.GuildID, newNick)
 	if err != nil && isDiscord401(err) {
 		log.Println("Discord returned 401 Unauthorized; attempting to refresh token from local Discord client...")
-		if refreshedToken, rErr := detectLocalDiscordToken(cfg.DiscordName); rErr == nil && refreshedToken != "" && refreshedToken != cfg.DiscordToken {
+		if refreshedToken, rErr := detectLocalDiscordToken(cfg.DiscordName); rErr == nil &&
+			refreshedToken != "" && refreshedToken != cfg.DiscordToken {
 			cfg.DiscordToken = refreshedToken
 			tryPersistConfigToken(cfg)
 			log.Println("Refreshed Discord token from local client; retrying nickname update...")
@@ -662,7 +662,8 @@ func detectLocalDiscordToken(preferredName string) (string, error) {
 	for _, token := range candidates {
 		user, err := getCurrentUser(token)
 		if err == nil && user != nil && user.ID != "" {
-			if preferredName != "" && (strings.EqualFold(user.Username, preferredName) || strings.EqualFold(user.GlobalName, preferredName)) {
+			if preferredName != "" && (strings.EqualFold(user.Username, preferredName) ||
+				strings.EqualFold(user.GlobalName, preferredName)) {
 				return token, nil
 			}
 			if firstValid == "" {

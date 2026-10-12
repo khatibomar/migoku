@@ -78,7 +78,7 @@ func TestLoadConfigAndEnv(t *testing.T) {
 	t.Setenv("GUILD_ID", "987654321")
 	t.Setenv("INTERVAL", "30m")
 
-	cfg, _ := loadConfigAndEnv("/non/existent/path/config.json")
+	cfg := loadConfigAndEnv("/non/existent/path/config.json")
 	if cfg.DiscordToken != "test-token-123" {
 		t.Errorf("expected DiscordToken test-token-123, got %q", cfg.DiscordToken)
 	}
