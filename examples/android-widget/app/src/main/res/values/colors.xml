@@ -1,9 +1,14 @@
 <resources>
-    <color name="bg_dark">#121212</color>
-    <color name="card_bg">#1A1815</color>
-    <color name="accent_gold">#D4A853</color>
-    <color name="stat_known">#4ADE80</color>
-    <color name="stat_learning">#FBBF24</color>
+    <color name="bg_dark">#0A002A</color>
+    <color name="card_bg">#2615102E</color>
+    <color name="migaku_crimson">#E11D48</color>
+    <color name="migaku_violet">#7C3AED</color>
+    <color name="migaku_rose">#FDA4AF</color>
+    <color name="stat_known">#34D399</color>
+    <color name="stat_known_label">#A7F3D0</color>
+    <color name="stat_learning">#38BDF8</color>
+    <color name="stat_learning_label">#BAE6FD</color>
     <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#9E9E9E</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="glass_border">#38FFFFFF</color>
 </resources>

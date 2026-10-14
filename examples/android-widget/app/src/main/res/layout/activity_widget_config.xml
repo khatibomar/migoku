@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121212"
+    android:background="#0A002A"
     android:padding="20dp">
 
     <LinearLayout
@@ -41,7 +41,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Japanese Learning Progress"
-                    android:textColor="#BB86FC"
+                    android:textColor="#FDA4AF"
                     android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
@@ -51,7 +51,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="MIGOKU SERVER URL"
-            android:textColor="#A0A0A0"
+            android:textColor="#94A3B8"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -66,7 +66,7 @@
             android:inputType="textUri"
             android:padding="12dp"
             android:textColor="#FFFFFF"
-            android:textColorHint="#555555"
+            android:textColorHint="#64748B"
             android:textSize="14sp" />
 
         <!-- API Key Field -->
@@ -74,7 +74,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="API KEY (X-API-KEY)"
-            android:textColor="#A0A0A0"
+            android:textColor="#94A3B8"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -89,7 +89,7 @@
             android:inputType="textPassword"
             android:padding="12dp"
             android:textColor="#FFFFFF"
-            android:textColorHint="#555555"
+            android:textColorHint="#64748B"
             android:textSize="14sp" />
 
         <!-- Language Field -->
@@ -97,7 +97,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="LANGUAGE CODE"
-            android:textColor="#A0A0A0"
+            android:textColor="#94A3B8"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -112,16 +112,16 @@
             android:inputType="text"
             android:padding="12dp"
             android:textColor="#FFFFFF"
-            android:textColorHint="#555555"
+            android:textColorHint="#64748B"
             android:textSize="14sp" />
 
         <Button
             android:id="@+id/btn_save_config"
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:backgroundTint="#BB86FC"
+            android:backgroundTint="#E11D48"
             android:text="Save &amp; Add Widget"
-            android:textColor="#000000"
+            android:textColor="#FFFFFF"
             android:textStyle="bold" />
 
         <TextView
@@ -131,7 +131,7 @@
             android:gravity="center"
             android:lineSpacingExtra="3dp"
             android:text="Note: For Android Emulator, use http://10.0.2.2:8080 to connect to your host machine. For physical devices on Wi-Fi, use your local PC IP address."
-            android:textColor="#666666"
+            android:textColor="#94A3B8"
             android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>
