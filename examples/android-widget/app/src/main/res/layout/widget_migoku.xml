@@ -8,11 +8,13 @@
 
     Two things about RemoteViews shape this layout:
 
-      * the artwork ships as a single plate (drawable-nodpi/widget_plate.jpg) used
-        as the widget background. Splitting it into a sky band plus a landscape
-        band so the picture could keep its proportions only produced a visible
-        seam and sliced Fuji's summit off, so the design is drawn once and scaled
-        to whatever cell the launcher hands over;
+      * the artwork ships as a single plate (drawable-nodpi/widget_plate.webp)
+        used as the widget background. It carries rounded corners with a feathered
+        alpha edge, so the widget reads as glass over the wallpaper instead of a
+        rectangle cut out of a picture. Splitting the plate into a sky band plus a
+        landscape band so the picture could keep its proportions only produced a
+        visible seam and sliced Fuji's summit off, so the design is drawn once and
+        scaled to whatever cell the launcher hands over;
       * weights, not fixed margins, drive the columns, so the design survives both
         a wide 4x2 placement and a much squarer resized one.
 -->

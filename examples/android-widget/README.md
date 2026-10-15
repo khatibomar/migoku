@@ -13,7 +13,7 @@ Included in this directory:
 - **Live Japanese Progress**: Fetches your word counts via `GET /api/v1/status/counts?lang=ja`.
 - **Known & Learning Counters**: Highlights words mastered vs words in progress.
 - **Progress Ratio & Bar**: Visual breakdown of your vocabulary progress.
-- **Design Plate + Vector Artwork**: the glass background (sky, Mount Fuji, pagoda, cherry blossoms) is the supplied artwork plate in `res/drawable-nodpi/widget_plate.jpg`; everything on top of it - hinomaru medallion, metric tiles, chevron, progress bars - is vector.
+- **Design Plate + Vector Artwork**: the glass background (sky, Mount Fuji, pagoda, cherry blossoms) is the supplied artwork plate in `res/drawable-nodpi/widget_plate.webp`, with rounded corners and a feathered alpha edge so the widget reads as a sheet of glass over the wallpaper; everything on top of it - hinomaru medallion, metric tiles, chevron, progress bars - is vector.
 - **Responsive Layout**: columns are driven by weights, so the design holds together from a wide 4x2 placement to a squarer resized one.
 - **Manual Tap-to-Refresh**: Tap either metric card to refresh on demand; tap the greeting to reopen the settings screen.
 - **Automatic Background Sync**: Schedules background refresh using Android's WorkManager.
@@ -68,7 +68,7 @@ examples/android-widget/
             │   └── WidgetConfigActivity.kt  # Setup screen on widget placement
             └── res/
                 ├── drawable/                # Vector artwork, card surfaces, progress bars
-                ├── drawable-nodpi/          # widget_plate.jpg (design background)
+                ├── drawable-nodpi/          # widget_plate.webp (design background, alpha corners)
                 ├── layout/
                 │   ├── widget_migoku.xml    # Widget RemoteViews layout
                 │   └── activity_widget_config.xml
