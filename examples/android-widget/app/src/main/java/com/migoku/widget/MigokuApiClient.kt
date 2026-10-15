@@ -1,14 +1,8 @@
 package com.migoku.widget
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -23,8 +17,6 @@ data class JapaneseProgress(
 
 object MigokuApiClient {
     private const val TAG = "MigokuApiClient"
-    const val DEFAULT_AVATAR_URL = "https://avatars.githubusercontent.com/u/52677511?s=200&v=4"
-    private const val AVATAR_CACHE_FILE = "migaku_avatar_cache.png"
 
     /**
      * Fetches Japanese language learning counts from Migoku API.
@@ -90,45 +82,6 @@ object MigokuApiClient {
             }
             trimmed.startsWith("{") -> JSONObject(trimmed)
             else -> null
-        }
-    }
-
-    /**
-     * Downloads and caches the Migaku avatar bitmap from GitHub.
-     */
-    fun getOrFetchAvatar(context: Context, avatarUrl: String = DEFAULT_AVATAR_URL): Bitmap? {
-        val cacheFile = File(context.cacheDir, AVATAR_CACHE_FILE)
-
-        // Return cached bitmap if fresh (less than 24 hours old)
-        if (cacheFile.exists() && System.currentTimeMillis() - cacheFile.lastModified() < 86_400_000) {
-            BitmapFactory.decodeFile(cacheFile.absolutePath)?.let { return it }
-        }
-
-        return try {
-            val url = URL(avatarUrl)
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 6000
-                readTimeout = 6000
-                doInput = true
-                connect()
-            }
-
-            val input: InputStream = conn.inputStream
-            val bitmap = BitmapFactory.decodeStream(input)
-            conn.disconnect()
-
-            if (bitmap != null) {
-                // Save to cache
-                FileOutputStream(cacheFile).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 95, out)
-                }
-            }
-            bitmap
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not fetch avatar: ${e.message}")
-            if (cacheFile.exists()) {
-                BitmapFactory.decodeFile(cacheFile.absolutePath)
-            } else null
         }
     }
 }

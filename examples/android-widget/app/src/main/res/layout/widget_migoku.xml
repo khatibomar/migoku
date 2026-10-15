@@ -1,211 +1,325 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    Migoku widget rebuilt from the japanese_widget_svg_layers composite:
+    two columns on a frosted glass surface - hinomaru greeting plus the Mount
+    Fuji scene on the left, the Learning and Known cards stacked on the right.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@drawable/bg_widget_glass">
 
-    <!-- Header: Migaku Avatar + Title + Refresh Button -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:layout_height="match_parent"
+        android:baselineAligned="false"
+        android:orientation="horizontal"
+        android:padding="10dp">
 
-        <!-- Migaku GitHub Avatar Image -->
-        <ImageView
-            android:id="@+id/img_migaku_avatar"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:contentDescription="@string/app_name"
-            android:scaleType="centerCrop"
-            android:src="@drawable/ic_migaku_logo" />
-
+        <!-- ============ Left: hinomaru, heading, landscape ============ -->
         <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:id="@+id/layout_header"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Migoku"
-                    android:textColor="@color/text_primary"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
+                <ImageView
+                    android:id="@+id/img_jp_flag"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:contentDescription="@string/flag_description"
+                    android:src="@drawable/ic_japan_flag" />
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/badge_ja_bg"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="2dp"
-                    android:text="🇯🇵 JA"
-                    android:textColor="@color/badge_ja_text"
-                    android:textSize="10sp"
-                    android:textStyle="bold" />
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tv_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:shadowColor="@color/text_shadow"
+                        android:shadowDx="0"
+                        android:shadowDy="1"
+                        android:shadowRadius="4"
+                        android:text="@string/widget_title"
+                        android:textColor="@color/text_ink_glass"
+                        android:textSize="19sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:shadowColor="@color/text_shadow"
+                        android:shadowDx="0"
+                        android:shadowDy="1"
+                        android:shadowRadius="3"
+                        android:text="@string/widget_subtitle"
+                        android:textColor="@color/text_ink_glass"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/tv_tagline"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:includeFontPadding="false"
+                        android:letterSpacing="0.12"
+                        android:maxLines="1"
+                        android:text="@string/widget_tagline"
+                        android:textColor="@color/text_ink_glass_muted"
+                        android:textSize="8sp" />
+                </LinearLayout>
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tv_last_updated"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="Synced: --:--"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp" />
+            <!-- Landscape fills the rest of the left column. It bleeds past the
+                 container padding on the left and bottom so the artwork runs off
+                 the glass the way it does in the design, instead of floating in
+                 a framed rectangle. -->
+            <ImageView
+                android:id="@+id/img_scene"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginStart="-10dp"
+                android:layout_marginBottom="-10dp"
+                android:layout_weight="1"
+                android:alpha="0.95"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop"
+                android:src="@drawable/scene_japan" />
         </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/btn_refresh"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Refresh"
-            android:padding="8dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_refresh" />
-    </LinearLayout>
-
-    <!-- Error message fallback -->
-    <TextView
-        android:id="@+id/tv_error_message"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:gravity="center"
-        android:padding="12dp"
-        android:text="Connecting to Migoku..."
-        android:textColor="@color/error_text"
-        android:textSize="12sp"
-        android:visibility="gone" />
-
-    <!-- Stats Content -->
-    <LinearLayout
-        android:id="@+id/layout_stats_content"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:orientation="vertical">
-
-        <!-- Known & Learning Cards Row -->
+        <!-- ============ Right: metric cards ============ -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.64"
+            android:orientation="vertical">
 
-            <!-- Known Count Card -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="7dp"
-                android:layout_weight="1"
-                android:background="@drawable/stat_card_known"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingVertical="14dp"
-                android:paddingHorizontal="12dp">
-
-                <TextView
-                    android:id="@+id/tv_known_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="@color/stat_known"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:text="✓ KNOWN"
-                    android:textColor="@color/stat_known_label"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.06" />
-            </LinearLayout>
-
-            <!-- Learning Count Card -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="7dp"
-                android:layout_weight="1"
-                android:background="@drawable/stat_card_learning"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingVertical="14dp"
-                android:paddingHorizontal="12dp">
-
-                <TextView
-                    android:id="@+id/tv_learning_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="@color/stat_learning"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:text="→ LEARNING"
-                    android:textColor="@color/stat_learning_label"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.06" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Progress Bar -->
-        <ProgressBar
-            android:id="@+id/progress_horizontal"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="7dp"
-            android:layout_marginTop="14dp"
-            android:max="100"
-            android:progress="0"
-            android:progressDrawable="@drawable/progress_bar_custom" />
-
-        <!-- Bottom row: Total words and Progress percentage -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-
+            <!-- Error fallback -->
             <TextView
-                android:id="@+id/tv_total_count"
-                android:layout_width="0dp"
+                android:id="@+id/tv_error_message"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Total: --"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
+                android:background="@drawable/bg_error_banner"
+                android:gravity="center"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="8dp"
+                android:textColor="@color/error_text"
+                android:textSize="10sp"
+                android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/tv_progress_percent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0%"
-                android:textColor="@color/text_primary"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+            <LinearLayout
+                android:id="@+id/layout_stats_content"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="vertical">
+
+                <!-- Learning card -->
+                <LinearLayout
+                    android:id="@+id/card_learning"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_stat_card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="8dp">
+
+                    <ImageView
+                        android:id="@+id/ic_stat_learning"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:contentDescription="@null"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_stat_learning" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:maxLines="1"
+                            android:shadowColor="@color/text_shadow"
+                            android:shadowDx="0"
+                            android:shadowDy="1"
+                            android:shadowRadius="4"
+                            android:text="@string/label_learning"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="bottom"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tv_learning_count"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:maxLines="1"
+                                android:shadowColor="@color/text_shadow"
+                                android:shadowDx="0"
+                                android:shadowDy="1"
+                                android:shadowRadius="5"
+                                android:text="0"
+                                android:textColor="@color/text_primary"
+                                android:textSize="26sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tv_learning_total"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:maxLines="1"
+                                android:text="/ 0"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <ProgressBar
+                            android:id="@+id/progress_learning"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="6dp"
+                            android:layout_marginTop="7dp"
+                            android:max="100"
+                            android:progress="0"
+                            android:progressDrawable="@drawable/progress_bar_learning" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginStart="6dp"
+                        android:contentDescription="@null"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_chevron_right" />
+                </LinearLayout>
+
+                <!-- Known card -->
+                <LinearLayout
+                    android:id="@+id/card_known"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_stat_card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="6dp">
+
+                    <ImageView
+                        android:id="@+id/ic_stat_known"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:contentDescription="@null"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_stat_known" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:maxLines="1"
+                            android:shadowColor="@color/text_shadow"
+                            android:shadowDx="0"
+                            android:shadowDy="1"
+                            android:shadowRadius="4"
+                            android:text="@string/label_known"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="bottom"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tv_known_count"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:maxLines="1"
+                                android:shadowColor="@color/text_shadow"
+                                android:shadowDx="0"
+                                android:shadowDy="1"
+                                android:shadowRadius="5"
+                                android:text="0"
+                                android:textColor="@color/text_primary"
+                                android:textSize="26sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tv_known_total"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:maxLines="1"
+                                android:text="/ 0"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <ProgressBar
+                            android:id="@+id/progress_known"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="6dp"
+                            android:layout_marginTop="7dp"
+                            android:max="100"
+                            android:progress="0"
+                            android:progressDrawable="@drawable/progress_bar_known" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginStart="6dp"
+                        android:contentDescription="@null"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_chevron_right" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
-
-</LinearLayout>
+</FrameLayout>

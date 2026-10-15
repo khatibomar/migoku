@@ -1,50 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Migaku brand palette: rose/crimson + violet on a deep plum surface -->
-    <color name="bg_dark">#07030F</color>
-    <color name="widget_surface">#170B2B</color>
-    <color name="widget_glass">#1AFFFFFF</color>
-    <color name="widget_glass_border">#33FFFFFF</color>
+    <!--
+        Palette converted from japanese_widget_svg_layers (the composite render):
+        a light, frosted blue glass surface with white text, white-hazed metric
+        cards and the blue/teal progress fills from the design.
+    -->
 
-    <!-- Brand accents -->
-    <color name="migaku_crimson">#E11D48</color>
-    <color name="migaku_crimson_dark">#BE123C</color>
-    <color name="migaku_rose">#FDA4AF</color>
-    <color name="migaku_pink">#FB7185</color>
-    <color name="migaku_violet">#7C3AED</color>
-    <color name="migaku_violet_light">#A78BFA</color>
-    <color name="migaku_lilac">#DDD6FE</color>
+    <!-- Widget glass surface: light, airy periwinkle sampled from the mockup -->
+    <color name="widget_glass_start">#D2E3F8</color>
+    <color name="widget_glass_center">#A9C9F0</color>
+    <color name="widget_glass_end">#8FB6E0</color>
+    <color name="widget_glass_highlight">#1AFFFFFF</color>
+    <color name="widget_glass_inner_stroke">#807ACDFF</color>
+    <color name="widget_glass_stroke">#F0FFFFFF</color>
 
-    <!-- Stat cards -->
-    <color name="stat_known">#A78BFA</color>
-    <color name="stat_known_label">#DDD6FE</color>
-    <color name="stat_known_bg">#24A78BFA</color>
-    <color name="stat_known_border">#59A78BFA</color>
-    <color name="stat_known_highlight">#40A78BFA</color>
-    <color name="stat_learning">#FB7185</color>
-    <color name="stat_learning_label">#FECDD3</color>
-    <color name="stat_learning_bg">#24FB7185</color>
-    <color name="stat_learning_border">#59FB7185</color>
-    <color name="stat_learning_highlight">#40FB7185</color>
+    <!-- Frosted metric cards: a white haze lighter than the glass behind them,
+         but tuned down so the panels sit at the same lightness as the design -->
+    <color name="card_glass_start">#3DEEF7FF</color>
+    <color name="card_glass_end">#1A96C2E0</color>
+    <color name="card_glass_stroke">#B4FFFFFF</color>
 
-    <!-- Progress: violet -> rose brand sweep, matching the card order -->
-    <color name="progress_start">#8B5CF6</color>
-    <color name="progress_mid">#DB2777</color>
-    <color name="progress_end">#E11D48</color>
+    <!-- Progress bars -->
+    <color name="learning_fill_start">#FF42B7FF</color>
+    <color name="learning_fill_end">#FF416CFF</color>
+    <color name="known_fill_start">#FF43E2C0</color>
+    <color name="known_fill_end">#FF16D5B4</color>
+    <color name="progress_track">#66FFFFFF</color>
 
-    <!-- Text -->
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#B6A9D4</color>
-    <color name="text_muted">#7C6F9E</color>
+    <!-- Metric tiles -->
+    <color name="tile_learning">#E6467BFF</color>
+    <color name="tile_learning_stroke">#A6B6D7FF</color>
+    <color name="tile_known">#E62EC6B0</color>
+    <color name="tile_known_stroke">#99B9FFF1</color>
+    <color name="tile_known_badge">#FFD9FFF7</color>
 
-    <color name="glass_border">#38FFFFFF</color>
-    <color name="badge_ja_bg">#33E11D48</color>
-    <color name="badge_ja_border">#80E11D48</color>
-    <color name="badge_ja_text">#FDA4AF</color>
+    <!-- Japanese landscape scene -->
+    <color name="scene_ridge_back">#948AB8EF</color>
+    <color name="scene_ridge_front">#A6588BCE</color>
+    <color name="scene_fuji_top">#FFD7E8FF</color>
+    <color name="scene_fuji_bottom">#FF5D8FE0</color>
+    <color name="scene_snow">#FAF7FBFF</color>
+    <color name="scene_snow_light">#D9FFFFFF</color>
+    <color name="scene_mist">#9ED5E8FF</color>
+    <color name="scene_blossom">#F2F6A8CF</color>
+    <color name="scene_blossom_core">#FFFFE5F3</color>
+    <color name="pagoda_roof">#FF263F7D</color>
+    <color name="pagoda_roof_dark">#FF253B77</color>
+    <color name="pagoda_eave_top">#FFEC6B82</color>
+    <color name="pagoda_eave_bottom">#FFEE788E</color>
+    <color name="pagoda_wall_top">#FFF5A6A8</color>
+    <color name="pagoda_wall_bottom">#FFF7B3B3</color>
+    <color name="pagoda_pillar_top">#FF7D4B83</color>
+    <color name="pagoda_pillar_bottom">#FF805184</color>
 
-    <color name="error_bg">#33F43F5E</color>
-    <color name="error_text">#FCA5A5</color>
+    <!-- Japan flag medallion -->
+    <color name="flag_disc">#E0FFFFFF</color>
+    <color name="flag_red">#FFBC002D</color>
 
-    <color name="input_bg">#1C0F31</color>
-    <color name="input_border">#3B2A5E</color>
+    <!-- Text: the design sets the greeting in white on the light glass surface -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#F2FFFFFF</color>
+    <color name="text_shadow">#4D0B2B4A</color>
+    <color name="chevron">#E6FFFFFF</color>
+    <color name="text_ink_glass">#FFFFFFFF</color>
+    <color name="text_ink_glass_muted">#4DFFFFFF</color>
+
+    <!-- Error banner -->
+    <color name="error_text">#FFFFFFFF</color>
+
+    <!-- Configuration screen (light) -->
+    <color name="bg_light">#E9F2FC</color>
+    <color name="input_bg">#FFFFFFFF</color>
+    <color name="input_border">#FFC6DCF0</color>
+    <color name="text_ink">#FF173553</color>
+    <color name="text_ink_muted">#FF6D8CAA</color>
+    <color name="accent">#FF416CFF</color>
 </resources>

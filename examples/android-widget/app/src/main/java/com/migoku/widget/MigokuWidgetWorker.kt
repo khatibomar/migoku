@@ -1,6 +1,7 @@
 package com.migoku.widget
 
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -28,14 +29,11 @@ class MigokuWidgetWorker(
         // Fetch stats from Migoku API
         val statsResult = MigokuApiClient.fetchJapaneseProgress(serverUrl, apiKey, lang)
 
-        // Download or read cached Migaku GitHub avatar
-        val avatar = MigokuApiClient.getOrFetchAvatar(context)
-
         val widgetIds = if (targetWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             intArrayOf(targetWidgetId)
         } else {
             appWidgetManager.getAppWidgetIds(
-                android.content.ComponentName(context, MigokuWidgetProvider::class.java)
+                ComponentName(context, MigokuWidgetProvider::class.java)
             )
         }
 
@@ -46,20 +44,20 @@ class MigokuWidgetWorker(
                         context,
                         appWidgetManager,
                         id,
-                        progress,
-                        avatar
+                        progress
                     )
                 }
             },
             onFailure = { error ->
+                val detail = error.localizedMessage ?: "Error"
+                val message = "${context.getString(R.string.status_offline)} ($detail)"
                 for (id in widgetIds) {
                     MigokuWidgetProvider.updateWidgetViews(
                         context,
                         appWidgetManager,
                         id,
                         progress = null,
-                        avatar = avatar,
-                        errorMessage = "Offline or unreachable (${error.localizedMessage ?: "Error"})"
+                        errorMessage = message
                     )
                 }
             }

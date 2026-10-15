@@ -1,4 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Migoku Widget</string>
-    <string name="widget_description">Displays your Japanese learning progress (known and learning counts) with Migaku avatar.</string>
+    <string name="widget_description">Japanese learning dashboard: hinomaru greeting with Mount Fuji, plus your known and learning counts.</string>
+
+    <!-- Widget header -->
+    <string name="flag_description">Japanese flag</string>
+    <string name="widget_title">がんばろう！</string>
+    <string name="widget_subtitle">Keep going!</string>
+    <string name="widget_tagline">日本語 • JAPANESE</string>
+    <string name="status_offline">Offline or unreachable</string>
+
+    <!-- Metric cards -->
+    <string name="label_learning">Learning</string>
+    <string name="label_known">Known</string>
+
+    <!-- Configuration screen -->
+    <string name="config_title">Migoku Widget</string>
+    <string name="config_subtitle">Japanese learning progress</string>
+    <string name="config_server_url_label">MIGOKU SERVER URL</string>
+    <string name="config_api_key_label">API KEY (X-API-KEY)</string>
+    <string name="config_lang_label">LANGUAGE CODE</string>
+    <string name="config_save">Save &amp; Add Widget</string>
+    <string name="config_note">Note: For Android Emulator, use http://10.0.2.2:8080 to connect to your host machine. For physical devices on Wi-Fi, use your local PC IP address.</string>
+    <string name="error_server_url_required">Please enter Migoku server URL</string>
+    <string name="toast_settings_saved">Settings saved! Fetching Japanese stats…</string>
 </resources>

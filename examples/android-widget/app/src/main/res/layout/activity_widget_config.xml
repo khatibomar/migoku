@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_dark"
+    android:background="@color/bg_light"
     android:fillViewport="true"
     android:padding="24dp">
 
@@ -14,15 +14,15 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="32dp"
             android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:layout_marginBottom="32dp">
+            android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:src="@drawable/ic_migaku_logo"
-                android:contentDescription="Migaku Logo" />
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:contentDescription="@string/config_title"
+                android:src="@drawable/ic_japan_flag" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -33,8 +33,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Migoku Widget"
-                    android:textColor="@color/text_primary"
+                    android:text="@string/config_title"
+                    android:textColor="@color/text_ink"
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
@@ -42,8 +42,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Japanese Learning Progress"
-                    android:textColor="@color/badge_ja_text"
+                    android:text="@string/config_subtitle"
+                    android:textColor="@color/learning_fill_start"
                     android:textSize="13sp" />
             </LinearLayout>
         </LinearLayout>
@@ -52,11 +52,11 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="MIGOKU SERVER URL"
-            android:textColor="@color/text_secondary"
+            android:letterSpacing="0.05"
+            android:text="@string/config_server_url_label"
+            android:textColor="@color/text_ink_muted"
             android:textSize="11sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05" />
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/et_server_url"
@@ -68,19 +68,19 @@
             android:hint="http://10.0.2.2:8080 or Unikraft URL"
             android:inputType="textUri"
             android:padding="14dp"
-            android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_muted"
+            android:textColor="@color/text_ink"
+            android:textColorHint="@color/text_ink_muted"
             android:textSize="15sp" />
 
         <!-- API Key Field -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="API KEY (X-API-KEY)"
-            android:textColor="@color/text_secondary"
+            android:letterSpacing="0.05"
+            android:text="@string/config_api_key_label"
+            android:textColor="@color/text_ink_muted"
             android:textSize="11sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05" />
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/et_api_key"
@@ -92,19 +92,19 @@
             android:hint="Leave empty if auth is disabled"
             android:inputType="textPassword"
             android:padding="14dp"
-            android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_muted"
+            android:textColor="@color/text_ink"
+            android:textColorHint="@color/text_ink_muted"
             android:textSize="15sp" />
 
         <!-- Language Field -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="LANGUAGE CODE"
-            android:textColor="@color/text_secondary"
+            android:letterSpacing="0.05"
+            android:text="@string/config_lang_label"
+            android:textColor="@color/text_ink_muted"
             android:textSize="11sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05" />
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/et_lang"
@@ -116,16 +116,16 @@
             android:hint="ja"
             android:inputType="text"
             android:padding="14dp"
-            android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_muted"
+            android:textColor="@color/text_ink"
+            android:textColorHint="@color/text_ink_muted"
             android:textSize="15sp" />
 
         <Button
             android:id="@+id/btn_save_config"
             android:layout_width="match_parent"
             android:layout_height="54dp"
-            android:backgroundTint="@color/migaku_crimson"
-            android:text="Save &amp; Add Widget"
+            android:backgroundTint="@color/accent"
+            android:text="@string/config_save"
             android:textColor="@color/text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -134,12 +134,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
+            android:background="@drawable/input_bg"
             android:gravity="center"
             android:lineSpacingExtra="4dp"
             android:padding="16dp"
-            android:background="@drawable/input_bg"
-            android:text="Note: For Android Emulator, use http://10.0.2.2:8080 to connect to your host machine. For physical devices on Wi-Fi, use your local PC IP address."
-            android:textColor="@color/text_secondary"
+            android:text="@string/config_note"
+            android:textColor="@color/text_ink_muted"
             android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>

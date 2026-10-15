@@ -1,6 +1,6 @@
 # Migoku Android Widget
 
-An Android home screen widget that talks to the Migoku API to display your Japanese learning progress. It tracks your **Known** and **Learning** word counts and renders a widget featuring the official Migaku avatar.
+An Android home screen widget that talks to the Migoku API to display your Japanese learning progress. It tracks your **Known** and **Learning** word counts on a frosted glass dashboard: hinomaru medallion, `がんばろう！` heading, Mount Fuji / pagoda / cherry blossom scene, and two metric cards.
 
 Included in this directory:
 1. **Interactive Web Simulator (`index.html`)**: Live preview in your browser via `make examples`.
@@ -14,9 +14,8 @@ Included in this directory:
 - **Live Japanese Progress**: Fetches your word counts via `GET /api/v1/status/counts?lang=ja`.
 - **Known & Learning Counters**: Highlights words mastered vs words in progress.
 - **Progress Ratio & Bar**: Visual breakdown of your vocabulary progress.
-- **Migaku Avatar**: Renders the official Migaku avatar from GitHub:
-  `https://avatars.githubusercontent.com/u/52677511?s=200&v=4`
-- **Manual Tap-to-Refresh**: Tap the refresh icon on the widget to update stats on demand.
+- **Vector Artwork**: The whole design is vector - glass surface, hinomaru medallion, landscape scene, metric tiles and chevrons are Android vector drawables converted from the SVG layer pack (`japanese_widget_svg_layers`).
+- **Manual Tap-to-Refresh**: Tap either metric card to refresh on demand; tap the heading to reopen the settings screen.
 - **Automatic Background Sync**: Schedules background refresh using Android's WorkManager.
 - **Configuration Activity**: Enter your Migoku server URL, API key, and target language directly from your phone.
 
@@ -54,12 +53,12 @@ examples/android-widget/
     └── src/main/
         ├── AndroidManifest.xml
         ├── java/com/migoku/widget/
-        │   ├── MigokuApiClient.kt       # API client & GitHub avatar loader
+        │   ├── MigokuApiClient.kt       # Migoku stats API client
         │   ├── MigokuWidgetProvider.kt  # AppWidgetProvider & RemoteViews logic
         │   ├── MigokuWidgetWorker.kt    # Jetpack WorkManager background worker
         │   └── WidgetConfigActivity.kt  # Setup screen on widget placement
         └── res/
-            ├── drawable/                # Widget shapes, progress bars, vector icons
+            ├── drawable/                # Glass surfaces, vector artwork, progress bars
             ├── layout/
             │   ├── widget_migoku.xml    # Widget RemoteViews layout
             │   └── activity_widget_config.xml
@@ -155,11 +154,6 @@ Response payload:
     "ignored_count": 30
   }
 ]
-```
-
-Avatar image URL:
-```
-https://avatars.githubusercontent.com/u/52677511?s=200&v=4
 ```
 
 ---

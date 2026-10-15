@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Learning metric tile (from 04-learning-counter.svg): blue glass tile + book glyph. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="76dp"
+    android:height="76dp"
+    android:viewportWidth="76"
+    android:viewportHeight="76">
+    <path
+        android:fillColor="@color/tile_learning"
+        android:pathData="M24,0 H52 A24,24 0 0,1 76,24 V52 A24,24 0 0,1 52,76 H24 A24,24 0 0,1 0,52 V24 A24,24 0 0,1 24,0 Z"
+        android:strokeColor="@color/tile_learning_stroke"
+        android:strokeWidth="1.5" />
+    <!-- Open book -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M18,20 Q31,12 40,21 V54 Q29,45 18,52Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M43,21 Q55,12 65,20 V52 Q53,45 43,54Z" />
+</vector>

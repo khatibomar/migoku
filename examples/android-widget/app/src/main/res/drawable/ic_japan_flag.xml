@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hinomaru medallion (from 02-japan-flag.svg). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="68dp"
+    android:height="68dp"
+    android:viewportWidth="220"
+    android:viewportHeight="220">
+    <!-- White disc -->
+    <path
+        android:fillColor="@color/flag_disc"
+        android:pathData="M110,19 a91,91 0 1,0 0,182 a91,91 0 1,0 0,-182"
+        android:strokeColor="@color/flag_disc"
+        android:strokeWidth="3" />
+    <!-- Red sun -->
+    <path
+        android:fillColor="@color/flag_red"
+        android:pathData="M110,110 m-47,0 a47,47 0 1,0 94,0 a47,47 0 1,0 -94,0" />
+</vector>

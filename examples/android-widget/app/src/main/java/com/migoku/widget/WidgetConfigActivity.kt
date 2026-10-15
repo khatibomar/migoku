@@ -52,7 +52,7 @@ class WidgetConfigActivity : Activity() {
             val lang = etLang.text.toString().trim().ifEmpty { "ja" }
 
             if (serverUrl.isEmpty()) {
-                Toast.makeText(this, "Please enter Migoku server URL", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.error_server_url_required, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -81,7 +81,7 @@ class WidgetConfigActivity : Activity() {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             }
             setResult(RESULT_OK, resultValue)
-            Toast.makeText(this, "Settings saved! Fetching Japanese stats...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_settings_saved, Toast.LENGTH_SHORT).show()
             finish()
         }
     }

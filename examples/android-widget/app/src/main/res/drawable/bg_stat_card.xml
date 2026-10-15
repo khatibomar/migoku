@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Frosted metric card surface (from 04/05-*-counter.svg).
+    The design corners are 42/174 of the card height, i.e. very round; a white
+    haze over the glass makes the card read lighter than its surroundings.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="20dp" />
+            <gradient
+                android:angle="315"
+                android:centerColor="@color/card_glass_start"
+                android:endColor="@color/card_glass_end"
+                android:startColor="@color/card_glass_start"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="20dp" />
+            <stroke android:width="1dp" android:color="@color/card_glass_stroke" />
+        </shape>
+    </item>
+</layer-list>

@@ -6,14 +6,11 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.view.View
 import android.widget.RemoteViews
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -70,12 +67,11 @@ class MigokuWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int,
             progress: JapaneseProgress?,
-            avatar: Bitmap?,
             errorMessage: String? = null
         ) {
             val views = RemoteViews(context.packageName, R.layout.widget_migoku)
 
-            // Setup refresh button click pending intent
+            // Tapping a metric card (or its chevron) triggers a refresh.
             val refreshIntent = Intent(context, MigokuWidgetProvider::class.java).apply {
                 action = ACTION_REFRESH
             }
@@ -85,9 +81,10 @@ class MigokuWidgetProvider : AppWidgetProvider() {
                 refreshIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.btn_refresh, refreshPendingIntent)
+            views.setOnClickPendingIntent(R.id.card_learning, refreshPendingIntent)
+            views.setOnClickPendingIntent(R.id.card_known, refreshPendingIntent)
 
-            // Setup widget body click to open config activity
+            // Tapping the header opens the configuration screen.
             val configIntent = Intent(context, WidgetConfigActivity::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             }
@@ -97,14 +94,7 @@ class MigokuWidgetProvider : AppWidgetProvider() {
                 configIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.widget_container, configPendingIntent)
-
-            // Set Migaku avatar if available
-            if (avatar != null) {
-                views.setImageViewBitmap(R.id.img_migaku_avatar, avatar)
-            } else {
-                views.setImageViewResource(R.id.img_migaku_avatar, R.drawable.ic_migaku_logo)
-            }
+            views.setOnClickPendingIntent(R.id.layout_header, configPendingIntent)
 
             if (errorMessage != null) {
                 views.setViewVisibility(R.id.layout_stats_content, View.GONE)
@@ -114,45 +104,46 @@ class MigokuWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.layout_stats_content, View.VISIBLE)
                 views.setViewVisibility(R.id.tv_error_message, View.GONE)
 
-                // Known count
-                views.setTextViewText(
-                    R.id.tv_known_count,
-                    String.format(Locale.getDefault(), "%,d", progress.knownCount)
-                )
+                val locale = Locale.getDefault()
+                val total = progress.totalWords
 
-                // Learning count
+                // Learning card: count + share of the deck
                 views.setTextViewText(
                     R.id.tv_learning_count,
-                    String.format(Locale.getDefault(), "%,d", progress.learningCount)
-                )
-
-                // Total and ratio
-                views.setTextViewText(
-                    R.id.tv_total_count,
-                    "Total: " + String.format(Locale.getDefault(), "%,d", progress.totalWords)
+                    String.format(locale, "%,d", progress.learningCount)
                 )
                 views.setTextViewText(
-                    R.id.tv_progress_percent,
-                    "${progress.progressPercentage}%"
+                    R.id.tv_learning_total,
+                    String.format(locale, "/ %,d", total)
                 )
-
-                // Progress bar
                 views.setProgressBar(
-                    R.id.progress_horizontal,
+                    R.id.progress_learning,
                     100,
-                    progress.progressPercentage,
+                    ratioPercent(progress.learningCount, total),
                     false
                 )
 
-                // Last updated timestamp
-                val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                // Known card: count + share of the deck
                 views.setTextViewText(
-                    R.id.tv_last_updated,
-                    "Synced: " + timeFormat.format(Date())
+                    R.id.tv_known_count,
+                    String.format(locale, "%,d", progress.knownCount)
+                )
+                views.setTextViewText(
+                    R.id.tv_known_total,
+                    String.format(locale, "/ %,d", total)
+                )
+                views.setProgressBar(
+                    R.id.progress_known,
+                    100,
+                    ratioPercent(progress.knownCount, total),
+                    false
                 )
             }
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
+
+        private fun ratioPercent(part: Int, total: Int): Int =
+            if (total > 0) ((part.toFloat() / total.toFloat()) * 100).toInt() else 0
     }
 }

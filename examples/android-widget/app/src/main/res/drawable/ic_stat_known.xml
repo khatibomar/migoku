@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Known metric tile (from 05-known-counter.svg): teal glass tile + check badge. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="76dp"
+    android:height="76dp"
+    android:viewportWidth="76"
+    android:viewportHeight="76">
+    <path
+        android:fillColor="@color/tile_known"
+        android:pathData="M24,0 H52 A24,24 0 0,1 76,24 V52 A24,24 0 0,1 52,76 H24 A24,24 0 0,1 0,52 V24 A24,24 0 0,1 24,0 Z"
+        android:strokeColor="@color/tile_known_stroke"
+        android:strokeWidth="1.5" />
+    <path
+        android:fillColor="@color/tile_known_badge"
+        android:pathData="M38,38 m-25,0 a25,25 0 1,0 50,0 a25,25 0 1,0 -50,0" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M26,38 l9,9 17,-19"
+        android:strokeColor="#FF20B79F"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5" />
+</vector>
