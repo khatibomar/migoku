@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Error banner shown when the API is unreachable. -->
+<!-- Error banner shown when the Migoku API is unreachable. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#66B42318" />
-            <corners android:radius="14dp" />
+            <corners android:radius="18dp" />
+            <solid android:color="@color/error_fill" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="14dp" />
-            <stroke android:width="1dp" android:color="#80FFD9D9" />
+            <corners android:radius="18dp" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/error_stroke" />
         </shape>
     </item>
 </layer-list>

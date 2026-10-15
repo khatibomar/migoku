@@ -3,9 +3,8 @@
 An Android home screen widget that talks to the Migoku API to display your Japanese learning progress. It tracks your **Known** and **Learning** word counts on a frosted glass dashboard: hinomaru medallion, `がんばろう！` heading, Mount Fuji / pagoda / cherry blossom scene, and two metric cards.
 
 Included in this directory:
-1. **Interactive Web Simulator (`index.html`)**: Live preview in your browser via `make examples`.
-2. **Native Android App & Widget Project (`app/`)**: Full Kotlin Android project using Jetpack `AppWidgetProvider`, `RemoteViews`, and `WorkManager`.
-3. **KWGT (Kustom Widget) Instructions**: For users who want a widget on Android without compiling an APK.
+1. **Native Android App & Widget Project (`app/`)**: Full Kotlin Android project using Jetpack `AppWidgetProvider`, `RemoteViews`, and `WorkManager`.
+2. **KWGT (Kustom Widget) Instructions**: For users who want a widget on Android without compiling an APK.
 
 ---
 
@@ -14,26 +13,33 @@ Included in this directory:
 - **Live Japanese Progress**: Fetches your word counts via `GET /api/v1/status/counts?lang=ja`.
 - **Known & Learning Counters**: Highlights words mastered vs words in progress.
 - **Progress Ratio & Bar**: Visual breakdown of your vocabulary progress.
-- **Vector Artwork**: The whole design is vector - glass surface, hinomaru medallion, landscape scene, metric tiles and chevrons are Android vector drawables converted from the SVG layer pack (`japanese_widget_svg_layers`).
-- **Manual Tap-to-Refresh**: Tap either metric card to refresh on demand; tap the heading to reopen the settings screen.
+- **Design Plate + Vector Artwork**: the glass background (sky, Mount Fuji, pagoda, cherry blossoms) is the supplied artwork plate in `res/drawable-nodpi/widget_plate.jpg`; everything on top of it - hinomaru medallion, metric tiles, chevron, progress bars - is vector.
+- **Responsive Layout**: columns are driven by weights, so the design holds together from a wide 4x2 placement to a squarer resized one.
+- **Manual Tap-to-Refresh**: Tap either metric card to refresh on demand; tap the greeting to reopen the settings screen.
 - **Automatic Background Sync**: Schedules background refresh using Android's WorkManager.
 - **Configuration Activity**: Enter your Migoku server URL, API key, and target language directly from your phone.
 
 ---
 
-## Quick Preview (In Browser)
+## Previewing the Design on a Device
 
-To preview and test the widget simulator in your web browser:
+Debug builds ship a preview activity that inflates the widget layout with sample data at
+widget size, so you can review the design without placing a widget:
 
 ```bash
-# From repository root
-make examples
+./build-apk.sh
+adb install -r examples/android-widget/app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n com.migoku.widget/.debug.WidgetPreviewActivity --ef scale 3
+adb shell screencap -p /sdcard/preview.png
 ```
 
-Then open:
-👉 **[http://localhost:4173/android-widget/](http://localhost:4173/android-widget/)**
+Extras: `width_dp` (328), `height_dp` (270), `scale` (1.0), `error` (false). It is a
+`src/debug` source set, so it never reaches the release APK.
 
-You can enter your Migoku server URL and API key, click **Fetch from API**, or test with **Load Sample Data**.
+> The preview uses `LayoutInflater`, not `RemoteViews`. To confirm the layout is
+> RemoteViews-safe, watch logcat while a real widget refreshes: `RemoteViews` only
+> inflates a fixed allowlist of view classes (no bare `<View>`, no `<Space>`) and
+> rejects anything else with *"Class not allowed to be inflated"*.
 
 ---
 
@@ -44,27 +50,31 @@ You can enter your Migoku server URL and API key, click **Fetch from API**, or t
 ```
 examples/android-widget/
 ├── README.md
-├── index.html                           # Browser simulator
 ├── settings.gradle.kts
 ├── build.gradle.kts
 ├── gradle.properties
 └── app/
     ├── build.gradle.kts
-    └── src/main/
-        ├── AndroidManifest.xml
-        ├── java/com/migoku/widget/
-        │   ├── MigokuApiClient.kt       # Migoku stats API client
-        │   ├── MigokuWidgetProvider.kt  # AppWidgetProvider & RemoteViews logic
-        │   ├── MigokuWidgetWorker.kt    # Jetpack WorkManager background worker
-        │   └── WidgetConfigActivity.kt  # Setup screen on widget placement
-        └── res/
-            ├── drawable/                # Glass surfaces, vector artwork, progress bars
-            ├── layout/
-            │   ├── widget_migoku.xml    # Widget RemoteViews layout
-            │   └── activity_widget_config.xml
-            ├── values/                  # Strings, colors
-            └── xml/
-                └── migoku_widget_info.xml # AppWidget metadata
+    └── src/
+        ├── debug/                       # Preview activity only, never shipped in release
+        │   ├── AndroidManifest.xml
+        │   └── java/com/migoku/widget/debug/WidgetPreviewActivity.kt
+        └── main/
+            ├── AndroidManifest.xml
+            ├── java/com/migoku/widget/
+            │   ├── MigokuApiClient.kt       # Migoku stats API client
+            │   ├── MigokuWidgetProvider.kt  # AppWidgetProvider & RemoteViews logic
+            │   ├── MigokuWidgetWorker.kt    # Jetpack WorkManager background worker
+            │   └── WidgetConfigActivity.kt  # Setup screen on widget placement
+            └── res/
+                ├── drawable/                # Vector artwork, card surfaces, progress bars
+                ├── drawable-nodpi/          # widget_plate.jpg (design background)
+                ├── layout/
+                │   ├── widget_migoku.xml    # Widget RemoteViews layout
+                │   └── activity_widget_config.xml
+                ├── values/                  # Strings, colors
+                └── xml/
+                    └── migoku_widget_info.xml # AppWidget metadata
 ```
 
 ### Running in Android Studio

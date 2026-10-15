@@ -1,71 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Palette for the redesigned widget.
+
+    The supplied design renders white text on a light frosted surface, so every
+    surface here is tuned a little deeper / more saturated than the mockup in
+    order to keep the counters readable against the bright glass artwork that
+    sits behind them.
+-->
 <resources>
-    <!--
-        Palette converted from japanese_widget_svg_layers (the composite render):
-        a light, frosted blue glass surface with white text, white-hazed metric
-        cards and the blue/teal progress fills from the design.
-    -->
 
-    <!-- Widget glass surface: light, airy periwinkle sampled from the mockup -->
-    <color name="widget_glass_start">#D2E3F8</color>
-    <color name="widget_glass_center">#A9C9F0</color>
-    <color name="widget_glass_end">#8FB6E0</color>
-    <color name="widget_glass_highlight">#1AFFFFFF</color>
-    <color name="widget_glass_inner_stroke">#807ACDFF</color>
-    <color name="widget_glass_stroke">#F0FFFFFF</color>
+    
 
-    <!-- Frosted metric cards: a white haze lighter than the glass behind them,
-         but tuned down so the panels sit at the same lightness as the design -->
-    <color name="card_glass_start">#3DEEF7FF</color>
-    <color name="card_glass_end">#1A96C2E0</color>
-    <color name="card_glass_stroke">#B4FFFFFF</color>
-
-    <!-- Progress bars -->
-    <color name="learning_fill_start">#FF42B7FF</color>
-    <color name="learning_fill_end">#FF416CFF</color>
-    <color name="known_fill_start">#FF43E2C0</color>
-    <color name="known_fill_end">#FF16D5B4</color>
-    <color name="progress_track">#66FFFFFF</color>
+    <!-- Metric cards: tinted glass, darker at the top-left like the design -->
+    <color name="card_learning_start">#9E3A57B8</color>
+    <color name="card_learning_end">#806E8FE0</color>
+    <color name="card_known_start">#A30A6E62</color>
+    <color name="card_known_end">#8535A894</color>
+    <color name="card_stroke">#6EFFFFFF</color>
 
     <!-- Metric tiles -->
-    <color name="tile_learning">#E6467BFF</color>
-    <color name="tile_learning_stroke">#A6B6D7FF</color>
-    <color name="tile_known">#E62EC6B0</color>
-    <color name="tile_known_stroke">#99B9FFF1</color>
-    <color name="tile_known_badge">#FFD9FFF7</color>
+    <color name="tile_learning_start">#FF5B8DF5</color>
+    <color name="tile_learning_end">#FF3B6BE8</color>
+    <color name="tile_known_start">#FF3DBE9A</color>
+    <color name="tile_known_end">#FF2FA07F</color>
+    <color name="tile_glyph">#FFFFFFFF</color>
+    <color name="tile_check">#FF2FA07F</color>
 
-    <!-- Japanese landscape scene -->
-    <color name="scene_ridge_back">#948AB8EF</color>
-    <color name="scene_ridge_front">#A6588BCE</color>
-    <color name="scene_fuji_top">#FFD7E8FF</color>
-    <color name="scene_fuji_bottom">#FF5D8FE0</color>
-    <color name="scene_snow">#FAF7FBFF</color>
-    <color name="scene_snow_light">#D9FFFFFF</color>
-    <color name="scene_mist">#9ED5E8FF</color>
-    <color name="scene_blossom">#F2F6A8CF</color>
-    <color name="scene_blossom_core">#FFFFE5F3</color>
-    <color name="pagoda_roof">#FF263F7D</color>
-    <color name="pagoda_roof_dark">#FF253B77</color>
-    <color name="pagoda_eave_top">#FFEC6B82</color>
-    <color name="pagoda_eave_bottom">#FFEE788E</color>
-    <color name="pagoda_wall_top">#FFF5A6A8</color>
-    <color name="pagoda_wall_bottom">#FFF7B3B3</color>
-    <color name="pagoda_pillar_top">#FF7D4B83</color>
-    <color name="pagoda_pillar_bottom">#FF805184</color>
+    <!-- Progress bars -->
+    <color name="progress_track">#70FFFFFF</color>
+    <color name="learning_fill_start">#FF4C8DFF</color>
+    <color name="learning_fill_end">#FF3A7BF5</color>
+    <color name="known_fill_start">#FF3DE0B0</color>
+    <color name="known_fill_end">#FF2ED8A3</color>
 
-    <!-- Japan flag medallion -->
-    <color name="flag_disc">#E0FFFFFF</color>
-    <color name="flag_red">#FFBC002D</color>
+    <!-- Hinomaru medallion -->
+    <color name="flag_disc_core">#FFFFFFFF</color>
+    <color name="flag_disc_mid">#FFEEF2FB</color>
+    <color name="flag_disc_edge">#FFDFE6F5</color>
+    <color name="flag_red_core">#FFFF7A8C</color>
+    <color name="flag_red_mid">#FFE0223F</color>
+    <color name="flag_red_edge">#FFC3123A</color>
 
-    <!-- Text: the design sets the greeting in white on the light glass surface -->
+    <!-- Header blob -->
+    <color name="blob_core">#38FFFFFF</color>
+    <color name="blob_edge">#08FFFFFF</color>
+
+    <!-- Text -->
     <color name="text_primary">#FFFFFFFF</color>
-    <color name="text_secondary">#F2FFFFFF</color>
-    <color name="text_shadow">#4D0B2B4A</color>
-    <color name="chevron">#E6FFFFFF</color>
-    <color name="text_ink_glass">#FFFFFFFF</color>
-    <color name="text_ink_glass_muted">#4DFFFFFF</color>
+    <color name="text_secondary">#99FFFFFF</color>
+    <color name="text_label">#E6FFFFFF</color>
+    <color name="text_shadow">#660E2A52</color>
+    <color name="chevron">#B8FFFFFF</color>
 
     <!-- Error banner -->
+    <color name="error_fill">#99E05A5A</color>
+    <color name="error_stroke">#80FFFFFF</color>
     <color name="error_text">#FFFFFFFF</color>
 
     <!-- Configuration screen (light) -->
@@ -74,5 +63,5 @@
     <color name="input_border">#FFC6DCF0</color>
     <color name="text_ink">#FF173553</color>
     <color name="text_ink_muted">#FF6D8CAA</color>
-    <color name="accent">#FF416CFF</color>
+    <color name="accent">#FF3A6BE0</color>
 </resources>

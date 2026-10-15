@@ -1,55 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Migoku widget rebuilt from the japanese_widget_svg_layers composite:
-    two columns on a frosted glass surface - hinomaru greeting plus the Mount
-    Fuji scene on the left, the Learning and Known cards stacked on the right.
+    Migoku widget, rebuilt around the supplied Japanese-learning-widget artwork.
+
+    The design is a 1280x650 glass dashboard: a hinomaru medallion with the
+    がんばろう！ greeting over the sky on the left, Mount Fuji / pagoda /
+    cherry blossoms across the bottom, and the two metric cards on the right.
+
+    Two things about RemoteViews shape this layout:
+
+      * the artwork ships as a single plate (drawable-nodpi/widget_plate.jpg) used
+        as the widget background. Splitting it into a sky band plus a landscape
+        band so the picture could keep its proportions only produced a visible
+        seam and sliced Fuji's summit off, so the design is drawn once and scaled
+        to whatever cell the launcher hands over;
+      * weights, not fixed margins, drive the columns, so the design survives both
+        a wide 4x2 placement and a much squarer resized one.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_widget_glass">
+    android:background="@drawable/widget_plate">
 
+    <!-- ============ Content: greeting on the left, cards on the right ============ -->
     <LinearLayout
+        android:id="@+id/layout_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:baselineAligned="false"
-        android:orientation="horizontal"
-        android:padding="10dp">
+        android:orientation="horizontal">
 
-        <!-- ============ Left: hinomaru, heading, landscape ============ -->
+        <!-- Greeting. Tapping anywhere in this column opens the settings screen. -->
         <LinearLayout
+            android:id="@+id/layout_header"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginEnd="6dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_weight="0.95"
+            android:orientation="vertical"
+            android:paddingStart="18dp"
+            android:paddingTop="10dp">
 
             <LinearLayout
-                android:id="@+id/layout_header"
-                android:layout_width="match_parent"
+                android:id="@+id/layout_header_row"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <ImageView
-                    android:id="@+id/img_jp_flag"
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:contentDescription="@string/flag_description"
-                    android:src="@drawable/ic_japan_flag" />
+                <FrameLayout
+                    android:id="@+id/header_blob"
+                    android:layout_width="62dp"
+                    android:layout_height="62dp"
+                    android:background="@drawable/bg_header_blob"
+                    android:padding="14dp">
+
+                    <ImageView
+                        android:id="@+id/img_jp_flag"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@string/flag_description"
+                        android:src="@drawable/ic_japan_flag" />
+                </FrameLayout>
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
                     android:orientation="vertical">
 
                     <TextView
                         android:id="@+id/tv_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-rounded"
                         android:includeFontPadding="false"
                         android:maxLines="1"
                         android:shadowColor="@color/text_shadow"
@@ -57,8 +80,8 @@
                         android:shadowDy="1"
                         android:shadowRadius="4"
                         android:text="@string/widget_title"
-                        android:textColor="@color/text_ink_glass"
-                        android:textSize="19sp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -66,6 +89,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
+                        android:fontFamily="sans-serif-rounded"
                         android:includeFontPadding="false"
                         android:maxLines="1"
                         android:shadowColor="@color/text_shadow"
@@ -73,84 +97,64 @@
                         android:shadowDy="1"
                         android:shadowRadius="3"
                         android:text="@string/widget_subtitle"
-                        android:textColor="@color/text_ink_glass"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/tv_tagline"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="3dp"
-                        android:includeFontPadding="false"
-                        android:letterSpacing="0.12"
-                        android:maxLines="1"
-                        android:text="@string/widget_tagline"
-                        android:textColor="@color/text_ink_glass_muted"
-                        android:textSize="8sp" />
+                        android:textColor="@color/text_secondary"
+                        android:textSize="9sp" />
                 </LinearLayout>
             </LinearLayout>
-
-            <!-- Landscape fills the rest of the left column. It bleeds past the
-                 container padding on the left and bottom so the artwork runs off
-                 the glass the way it does in the design, instead of floating in
-                 a framed rectangle. -->
-            <ImageView
-                android:id="@+id/img_scene"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_marginStart="-10dp"
-                android:layout_marginBottom="-10dp"
-                android:layout_weight="1"
-                android:alpha="0.95"
-                android:contentDescription="@null"
-                android:importantForAccessibility="no"
-                android:scaleType="centerCrop"
-                android:src="@drawable/scene_japan" />
         </LinearLayout>
 
-        <!-- ============ Right: metric cards ============ -->
+        <!-- Metric cards -->
         <LinearLayout
+            android:id="@+id/layout_stats"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.64"
-            android:orientation="vertical">
+            android:layout_weight="1.05"
+            android:orientation="vertical"
+            android:paddingTop="13dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="10dp">
 
-            <!-- Error fallback -->
-            <TextView
-                android:id="@+id/tv_error_message"
+            <!-- Error state: the pill is centred in the column instead of hanging off the top. -->
+            <FrameLayout
+                android:id="@+id/layout_error"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_error_banner"
-                android:gravity="center"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="8dp"
-                android:textColor="@color/error_text"
-                android:textSize="10sp"
-                android:visibility="gone" />
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tv_error_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_error_banner"
+                    android:gravity="center"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="12dp"
+                    android:textColor="@color/error_text"
+                    android:textSize="11sp" />
+            </FrameLayout>
 
             <LinearLayout
                 android:id="@+id/layout_stats_content"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:gravity="center_vertical"
                 android:orientation="vertical">
 
-                <!-- Learning card -->
                 <LinearLayout
                     android:id="@+id/card_learning"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
+                    android:layout_marginBottom="6dp"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_stat_card"
+                    android:background="@drawable/bg_card_learning"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="8dp">
+                    android:padding="11dp">
 
                     <ImageView
-                        android:id="@+id/ic_stat_learning"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
                         android:contentDescription="@null"
                         android:importantForAccessibility="no"
                         android:src="@drawable/ic_stat_learning" />
@@ -158,25 +162,28 @@
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="4dp"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-rounded"
                             android:maxLines="1"
                             android:shadowColor="@color/text_shadow"
                             android:shadowDx="0"
                             android:shadowDy="1"
-                            android:shadowRadius="4"
+                            android:shadowRadius="3"
                             android:text="@string/label_learning"
-                            android:textColor="@color/text_primary"
-                            android:textSize="13sp" />
+                            android:textColor="@color/text_label"
+                            android:textSize="10sp" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp"
                             android:gravity="bottom"
                             android:orientation="horizontal">
 
@@ -184,34 +191,38 @@
                                 android:id="@+id/tv_learning_count"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-rounded"
                                 android:includeFontPadding="false"
                                 android:maxLines="1"
                                 android:shadowColor="@color/text_shadow"
                                 android:shadowDx="0"
                                 android:shadowDy="1"
-                                android:shadowRadius="5"
+                                android:shadowRadius="4"
                                 android:text="0"
                                 android:textColor="@color/text_primary"
-                                android:textSize="26sp"
+                                android:textSize="20sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:id="@+id/tv_learning_total"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
+                                android:layout_marginStart="4dp"
                                 android:layout_weight="1"
+                                android:fontFamily="sans-serif-rounded"
+                                android:includeFontPadding="false"
+                                android:ellipsize="end"
                                 android:maxLines="1"
                                 android:text="/ 0"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
+                                android:textSize="9sp" />
                         </LinearLayout>
 
                         <ProgressBar
                             android:id="@+id/progress_learning"
                             style="?android:attr/progressBarStyleHorizontal"
                             android:layout_width="match_parent"
-                            android:layout_height="6dp"
+                            android:layout_height="5dp"
                             android:layout_marginTop="7dp"
                             android:max="100"
                             android:progress="0"
@@ -219,31 +230,26 @@
                     </LinearLayout>
 
                     <ImageView
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:layout_marginStart="6dp"
+                        android:layout_width="7dp"
+                        android:layout_height="11dp"
                         android:contentDescription="@null"
                         android:importantForAccessibility="no"
                         android:src="@drawable/ic_chevron_right" />
                 </LinearLayout>
 
-                <!-- Known card -->
                 <LinearLayout
                     android:id="@+id/card_known"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_stat_card"
+                    android:background="@drawable/bg_card_known"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="6dp">
+                    android:padding="11dp">
 
                     <ImageView
-                        android:id="@+id/ic_stat_known"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
                         android:contentDescription="@null"
                         android:importantForAccessibility="no"
                         android:src="@drawable/ic_stat_known" />
@@ -251,25 +257,28 @@
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="4dp"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-rounded"
                             android:maxLines="1"
                             android:shadowColor="@color/text_shadow"
                             android:shadowDx="0"
                             android:shadowDy="1"
-                            android:shadowRadius="4"
+                            android:shadowRadius="3"
                             android:text="@string/label_known"
-                            android:textColor="@color/text_primary"
-                            android:textSize="13sp" />
+                            android:textColor="@color/text_label"
+                            android:textSize="10sp" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp"
                             android:gravity="bottom"
                             android:orientation="horizontal">
 
@@ -277,34 +286,38 @@
                                 android:id="@+id/tv_known_count"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-rounded"
                                 android:includeFontPadding="false"
                                 android:maxLines="1"
                                 android:shadowColor="@color/text_shadow"
                                 android:shadowDx="0"
                                 android:shadowDy="1"
-                                android:shadowRadius="5"
+                                android:shadowRadius="4"
                                 android:text="0"
                                 android:textColor="@color/text_primary"
-                                android:textSize="26sp"
+                                android:textSize="20sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:id="@+id/tv_known_total"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
+                                android:layout_marginStart="4dp"
                                 android:layout_weight="1"
+                                android:fontFamily="sans-serif-rounded"
+                                android:includeFontPadding="false"
+                                android:ellipsize="end"
                                 android:maxLines="1"
                                 android:text="/ 0"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
+                                android:textSize="9sp" />
                         </LinearLayout>
 
                         <ProgressBar
                             android:id="@+id/progress_known"
                             style="?android:attr/progressBarStyleHorizontal"
                             android:layout_width="match_parent"
-                            android:layout_height="6dp"
+                            android:layout_height="5dp"
                             android:layout_marginTop="7dp"
                             android:max="100"
                             android:progress="0"
@@ -312,9 +325,8 @@
                     </LinearLayout>
 
                     <ImageView
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:layout_marginStart="6dp"
+                        android:layout_width="7dp"
+                        android:layout_height="11dp"
                         android:contentDescription="@null"
                         android:importantForAccessibility="no"
                         android:src="@drawable/ic_chevron_right" />

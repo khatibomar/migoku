@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug-only additions. WidgetPreviewActivity exists so the widget layout can be
+    rendered at widget size on a device/emulator for design review; it is not part
+    of the release APK.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <activity
+            android:name="com.migoku.widget.debug.WidgetPreviewActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+    </application>
+
+</manifest>

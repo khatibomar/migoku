@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Migoku Widget</string>
-    <string name="widget_description">Japanese learning dashboard: hinomaru greeting with Mount Fuji, plus your known and learning counts.</string>
+    <string name="widget_description">Frosted glass Japanese dashboard: hinomaru greeting over Mount Fuji, with your known and learning counts.</string>
 
     <!-- Widget header -->
     <string name="flag_description">Japanese flag</string>
     <string name="widget_title">がんばろう！</string>
     <string name="widget_subtitle">Keep going!</string>
-    <string name="widget_tagline">日本語 • JAPANESE</string>
     <string name="status_offline">Offline or unreachable</string>
 
     <!-- Metric cards -->

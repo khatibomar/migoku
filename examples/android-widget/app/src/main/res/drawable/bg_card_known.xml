@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Known metric card: same shape as the Learning card, teal tinted. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <gradient
+                android:angle="315"
+                android:endColor="@color/card_known_end"
+                android:startColor="@color/card_known_start"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <stroke
+                android:width="1.2dp"
+                android:color="@color/card_stroke" />
+        </shape>
+    </item>
+</layer-list>

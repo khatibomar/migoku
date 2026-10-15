@@ -98,10 +98,12 @@ class MigokuWidgetProvider : AppWidgetProvider() {
 
             if (errorMessage != null) {
                 views.setViewVisibility(R.id.layout_stats_content, View.GONE)
+                views.setViewVisibility(R.id.layout_error, View.VISIBLE)
                 views.setViewVisibility(R.id.tv_error_message, View.VISIBLE)
                 views.setTextViewText(R.id.tv_error_message, errorMessage)
             } else if (progress != null) {
                 views.setViewVisibility(R.id.layout_stats_content, View.VISIBLE)
+                views.setViewVisibility(R.id.layout_error, View.GONE)
                 views.setViewVisibility(R.id.tv_error_message, View.GONE)
 
                 val locale = Locale.getDefault()

@@ -2,18 +2,19 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@android:id/background">
         <shape android:shape="rectangle">
-            <corners android:radius="6dp" />
+            <corners android:radius="3dp" />
             <solid android:color="@color/progress_track" />
         </shape>
     </item>
     <item android:id="@android:id/progress">
         <clip>
             <shape android:shape="rectangle">
-                <corners android:radius="6dp" />
+                <corners android:radius="3dp" />
                 <gradient
                     android:angle="0"
+                    android:endColor="@color/learning_fill_end"
                     android:startColor="@color/learning_fill_start"
-                    android:endColor="@color/learning_fill_end" />
+                    android:type="linear" />
             </shape>
         </clip>
     </item>

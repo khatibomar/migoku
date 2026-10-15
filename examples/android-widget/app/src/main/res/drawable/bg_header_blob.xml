@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Soft light blob behind the hinomaru medallion and greeting. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <gradient
+        android:centerX="0.42"
+        android:centerY="0.34"
+        android:endColor="@color/blob_edge"
+        android:gradientRadius="0.75"
+        android:startColor="@color/blob_core"
+        android:type="radial" />
+</shape>

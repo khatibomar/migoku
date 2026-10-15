@@ -1,20 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Learning metric tile (from 04-learning-counter.svg): blue glass tile + book glyph. -->
+<!-- Learning metric tile: blue glass square + open book glyph. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="76dp"
-    android:height="76dp"
-    android:viewportWidth="76"
-    android:viewportHeight="76">
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="34dp"
+    android:height="34dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <path android:pathData="M13.5,0 H34.5 A13.5,13.5 0 0,1 48,13.5 V34.5 A13.5,13.5 0 0,1 34.5,48 H13.5 A13.5,13.5 0 0,1 0,34.5 V13.5 A13.5,13.5 0 0,1 13.5,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endColor="@color/tile_learning_end"
+                android:endY="48"
+                android:startColor="@color/tile_learning_start"
+                android:startY="0"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
+
     <path
-        android:fillColor="@color/tile_learning"
-        android:pathData="M24,0 H52 A24,24 0 0,1 76,24 V52 A24,24 0 0,1 52,76 H24 A24,24 0 0,1 0,52 V24 A24,24 0 0,1 24,0 Z"
-        android:strokeColor="@color/tile_learning_stroke"
-        android:strokeWidth="1.5" />
-    <!-- Open book -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M18,20 Q31,12 40,21 V54 Q29,45 18,52Z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M43,21 Q55,12 65,20 V52 Q53,45 43,54Z" />
+        android:fillColor="@color/tile_glyph"
+        android:pathData="M24,12C20,9 13,8 6,9.5v26c7,-1.5 14,-0.5 18,2.5 4,-3 11,-4 18,-2.5v-26C35,8 28,9 24,12ZM21.5,33.5c-4,-1.5 -9,-1.8 -12.5,-1.2V12.6c4,-0.6 9,0 12.5,2.2ZM39,32.3c-3.5,-0.6 -8.5,-0.3 -12.5,1.2V14.8c3.5,-2.2 8.5,-2.8 12.5,-2.2Z" />
 </vector>

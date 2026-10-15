@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Learning metric card. Very round corners (the design is almost a stadium)
+    over a tinted glass gradient, plus a hairline white rim.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <gradient
+                android:angle="315"
+                android:endColor="@color/card_learning_end"
+                android:startColor="@color/card_learning_start"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <stroke
+                android:width="1.2dp"
+                android:color="@color/card_stroke" />
+        </shape>
+    </item>
+</layer-list>
