@@ -19,7 +19,9 @@ android {
         // installable over the previous one; local builds fall back to the git
         // commit count.
         versionCode = migokuVersionCode()
-        versionName = "1.0.${migokuVersionCode()}"
+        // Include the git commit (when available) and the Unix timestamp used
+        // as versionCode so artifacts built from the same commit stay unique.
+        versionName = "1.0.${System.getenv("MIGOKU_GIT_HASH")?.trim() ?: "dev"}-${migokuVersionCode()}"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -36,20 +38,25 @@ android {
         }
 
         val storeFileProp = keystoreProps.getProperty("storeFile")?.trim()
-        val stableKeystore = if (!storeFileProp.isNullOrBlank()) storeFileProp else System.getenv("MIGOKU_KEYSTORE_PATH")
+        val stableKeystore = if (!storeFileProp.isNullOrBlank()) storeFileProp else System.getenv("MIGOKU_KEYSTORE_PATH")?.trim()
 
         val storePasswordProp = keystoreProps.getProperty("storePassword")?.trim()
-        val stableStorePassword = if (!storePasswordProp.isNullOrBlank()) storePasswordProp else System.getenv("MIGOKU_KEYSTORE_PASSWORD")
+        val stableStorePassword = if (!storePasswordProp.isNullOrBlank()) storePasswordProp else System.getenv("MIGOKU_KEYSTORE_PASSWORD")?.trim()
 
         val keyAliasProp = keystoreProps.getProperty("keyAlias")?.trim()
-        val stableKeyAlias = if (!keyAliasProp.isNullOrBlank()) keyAliasProp else System.getenv("MIGOKU_KEY_ALIAS")
+        val stableKeyAlias = if (!keyAliasProp.isNullOrBlank()) keyAliasProp else System.getenv("MIGOKU_KEY_ALIAS")?.trim()
 
         val keyPasswordProp = keystoreProps.getProperty("keyPassword")?.trim()
-        val stableKeyPassword = if (!keyPasswordProp.isNullOrBlank()) keyPasswordProp else System.getenv("MIGOKU_KEY_PASSWORD")
+        val stableKeyPassword = if (!keyPasswordProp.isNullOrBlank()) keyPasswordProp else System.getenv("MIGOKU_KEY_PASSWORD")?.trim()
 
-        if (!stableKeystore.isNullOrBlank()) {
+        val stableSigningReady = !stableKeystore.isNullOrBlank()
+            && !stableStorePassword.isNullOrBlank()
+            && !stableKeyAlias.isNullOrBlank()
+            && !stableKeyPassword.isNullOrBlank()
+
+        if (stableSigningReady) {
             create("stable") {
-                storeFile = file(stableKeystore)
+                storeFile = file(stableKeystore!!)
                 storePassword = stableStorePassword
                 keyAlias = stableKeyAlias
                 keyPassword = stableKeyPassword
@@ -68,7 +75,6 @@ android {
             // (per-machine) debug key so local/unsigned development builds
             // still produce an installable APK.
             signingConfig = signingConfigs.findByName("stable")
-                ?: signingConfigs.getByName("debug")
         }
     }
 

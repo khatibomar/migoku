@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Release APK
+    name: Build Debug and Release APKs
     environment: release
     runs-on: ubuntu-latest
 
@@ -51,23 +51,40 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
             echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > examples/android-widget/release.keystore
-            echo "MIGOKU_KEYSTORE_PATH=$(pwd)/examples/android-widget/release.keystore" >> $GITHUB_ENV
-            echo "MIGOKU_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> $GITHUB_ENV
-            echo "MIGOKU_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> $GITHUB_ENV
-            echo "MIGOKU_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> $GITHUB_ENV
+            if keytool -list -keystore examples/android-widget/release.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null 2>&1; then
+              echo "MIGOKU_KEYSTORE_PATH=$(pwd)/examples/android-widget/release.keystore" >> $GITHUB_ENV
+              echo "MIGOKU_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> $GITHUB_ENV
+              echo "MIGOKU_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> $GITHUB_ENV
+              echo "MIGOKU_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> $GITHUB_ENV
+            else
+              echo "Stable signing secrets are invalid; release build will be produced without stable signing."
+              rm -f examples/android-widget/release.keystore
+            fi
           else
-            echo "No stable signing secret found; release build will use the per-runner debug key (updates will not share a stable certificate)."
+            echo "No stable signing secret found; release build will be produced without stable signing."
           fi
+
+      - name: Build Debug APK
+        env:
+          MIGOKU_GIT_HASH: ${{ github.sha }}
+        run: |
+          cd examples/android-widget
+          ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Get git commit hash
         id: git_hash
         run: echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
+      - name: Get build timestamp
+        id: build_time
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
+
       - name: Build Release APK
         env:
-          ANDROID_VERSION_CODE: ${{ github.run_number }}
+          ANDROID_VERSION_CODE: ${{ steps.build_time.outputs.time }}
+          MIGOKU_GIT_HASH: ${{ steps.git_hash.outputs.hash }}
         run: |
           cd examples/android-widget
           ./gradlew assembleRelease --stacktrace --no-daemon
@@ -75,11 +92,18 @@ jobs:
       - name: Prepare APK for direct download
         run: |
           cp examples/android-widget/app/build/outputs/apk/release/app-release.apk \
-            examples/android-widget/app/build/outputs/apk/release/migoku-widget-${{ steps.git_hash.outputs.hash }}.apk
+            examples/android-widget/app/build/outputs/apk/release/migoku-widget-${{ steps.git_hash.outputs.hash }}-${{ steps.build_time.outputs.time }}.apk
 
-      - name: Upload APK Artifact
+      - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v7
         with:
-          path: examples/android-widget/app/build/outputs/apk/release/migoku-widget-${{ steps.git_hash.outputs.hash }}.apk
+          name: migoku-widget-debug-${{ steps.git_hash.outputs.hash }}
+          path: examples/android-widget/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: examples/android-widget/app/build/outputs/apk/release/migoku-widget-${{ steps.git_hash.outputs.hash }}-${{ steps.build_time.outputs.time }}.apk
           if-no-files-found: error
           archive: false
