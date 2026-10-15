@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build Release APK
     environment: release
     runs-on: ubuntu-latest
 
@@ -58,7 +58,7 @@ jobs:
             echo "MIGOKU_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> $GITHUB_ENV
             echo "MIGOKU_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> $GITHUB_ENV
           else
-            echo "ANDROID_KEYSTORE_BASE64 not set; using fallback debug signing."
+            echo "No stable signing secret found; release build will use the per-runner debug key (updates will not share a stable certificate)."
           fi
 
       - name: Get git commit hash
