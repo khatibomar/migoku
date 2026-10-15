@@ -50,3 +50,6 @@ local.properties
 *.keystore.b64
 keystore.properties
 signing.env
+
+# Local Android build helper (ignored)
+build-apk.sh
