@@ -92,6 +92,46 @@ cd examples/android-widget
 
 The APK will be generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
+### Installing updates (why updates used to be rejected)
+
+Android refuses an in-place update when **either** of these is true:
+
+1. The new APK's `versionCode` is not strictly greater than the installed one.
+2. The new APK is not signed with the **same** certificate as the installed one.
+
+Both happened in older builds: `versionCode` was hard-coded to `1`, and CI generated a fresh debug signing key on every run (debug keystores are machine-local and ephemeral), so successive artifacts had different signatures.
+
+This project now avoids that:
+
+- `versionCode` comes from the `ANDROID_VERSION_CODE` environment variable (the GitHub Actions run number in CI) and falls back to the current git commit count for local builds, so every shipped update has a higher version than the last.
+- release builds are signed with a **shared keystore kept in GitHub Secrets** (`ANDROID_KEYSTORE_BASE64` and friends), so the certificate never changes between CI builds. The key is not stored in the repository (shipping a private signing key would let anyone forge updates for this applicationId).
+
+> **One-time reset:** APKs produced by the old workflow (or by Android Studio with
+> its per-machine debug key) are signed with a different certificate than the
+> release builds. Android cannot upgrade across certificates, so you must
+> uninstall the old widget once before installing an updated APK. After that,
+> future updates install normally.
+
+### Configuring the CI signing key (maintainers)
+
+Generate a keystore once (keep it private, do not commit it):
+
+```bash
+cd examples/android-widget
+keytool -genkeypair -v -keystore release.keystore -alias migoku \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -storepass <store-pass> -keypass <key-pass> \
+  -dname "CN=Migoku Widget, O=Migoku, C=US"
+base64 -w 0 release.keystore > release.keystore.b64
+```
+
+Then add repository secrets (GitHub → Settings → Secrets and variables → Actions):
+
+- `ANDROID_KEYSTORE_BASE64` — contents of `release.keystore.b64`
+- `ANDROID_KEYSTORE_PASSWORD` — `<store-pass>`
+- `ANDROID_KEY_ALIAS` — `migoku`
+- `ANDROID_KEY_PASSWORD` — `<key-pass>`
+
 ---
 
 ## API Details

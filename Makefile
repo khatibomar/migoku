@@ -1,4 +1,4 @@
-.PHONY: run build clean docker-run lint examples unikraft-run unikraft-update unikraft-discord-build unikraft-discord-run unikraft-discord-update unikraft-discord-sync
+.PHONY: run build clean docker-run lint examples android-widget-apk unikraft-run unikraft-update unikraft-discord-build unikraft-discord-run unikraft-discord-update unikraft-discord-sync
 
 # Run the API server
 run: build
@@ -34,6 +34,13 @@ examples:
 	@echo "Serving static examples on http://localhost:4173"
 	@echo "Open /stats-dashboard/, /ai-study-coach/, or /android-widget/"
 	cd examples && python3 -m http.server 4173
+
+# Build the Android widget debug APK locally
+android-widget-apk:
+	@if [ -z "$(ANDROID_HOME)" ]; then echo "ERROR: ANDROID_HOME is not set (Android SDK required)"; exit 1; fi
+	@if [ -z "$(JAVA_HOME)" ]; then echo "ERROR: JAVA_HOME is not set (JDK 17 required)"; exit 1; fi
+	cd examples/android-widget && ./gradlew assembleDebug --no-daemon
+	@echo "APK ready: examples/android-widget/app/build/outputs/apk/debug/app-debug.apk"
 
 # Unikraft deployment
 

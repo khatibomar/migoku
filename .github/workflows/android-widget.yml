@@ -43,18 +43,42 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x examples/android-widget/gradlew
 
-      - name: Build Debug APK
+      - name: Configure stable signing key (optional)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          cd examples/android-widget
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > examples/android-widget/release.keystore
+            echo "MIGOKU_KEYSTORE_PATH=$(pwd)/examples/android-widget/release.keystore" >> $GITHUB_ENV
+            echo "MIGOKU_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> $GITHUB_ENV
+            echo "MIGOKU_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> $GITHUB_ENV
+            echo "MIGOKU_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> $GITHUB_ENV
+          else
+            echo "ANDROID_KEYSTORE_BASE64 not set; using fallback debug signing."
+          fi
 
       - name: Get git commit hash
         id: git_hash
         run: echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
+      - name: Build Release APK
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          cd examples/android-widget
+          ./gradlew assembleRelease --stacktrace --no-daemon
+
+      - name: Prepare APK for direct download
+        run: |
+          cp examples/android-widget/app/build/outputs/apk/release/app-release.apk \
+            examples/android-widget/app/build/outputs/apk/release/migoku-widget-${{ steps.git_hash.outputs.hash }}.apk
+
       - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: migoku-widget-${{ steps.git_hash.outputs.hash }}.apk
-          path: examples/android-widget/app/build/outputs/apk/debug/app-debug.apk
+          path: examples/android-widget/app/build/outputs/apk/release/migoku-widget-${{ steps.git_hash.outputs.hash }}.apk
           if-no-files-found: error
+          archive: false

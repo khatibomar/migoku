@@ -43,3 +43,10 @@ build/
 local.properties
 *.apk
 *.aab
+
+# Android signing config / secrets (never commit)
+*.keystore
+*.jks
+*.keystore.b64
+keystore.properties
+signing.env
