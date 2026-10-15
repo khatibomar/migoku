@@ -25,6 +25,7 @@ permissions:
 jobs:
   build:
     name: Build Debug APK
+    environment: release
     runs-on: ubuntu-latest
 
     steps:
