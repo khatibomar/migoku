@@ -48,9 +48,13 @@ jobs:
           cd examples/android-widget
           ./gradlew assembleDebug --stacktrace --no-daemon
 
+      - name: Get git commit hash
+        id: git_hash
+        run: echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: migoku-android-widget-apk
+          name: migoku-widget-${{ steps.git_hash.outputs.hash }}.apk
           path: examples/android-widget/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
