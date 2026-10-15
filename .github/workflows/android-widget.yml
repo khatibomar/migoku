@@ -38,6 +38,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
 
@@ -89,9 +92,22 @@ jobs:
           cd examples/android-widget
           ./gradlew assembleRelease --stacktrace --no-daemon
 
+      - name: Find Release APK
+        id: find_release_apk
+        run: |
+          APK=$(find examples/android-widget/app/build/outputs -name '*-release.apk' -o -name '*.apk' 2>/dev/null | grep -E 'release.*\.apk$' | head -1)
+          if [ -z "$APK" ]; then
+            echo "No release APK found"
+            find examples/android-widget/app/build/outputs -type f -name '*.apk' 2>/dev/null || true
+            exit 1
+          fi
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
+          echo "Found release APK: $APK"
+
       - name: Prepare APK for direct download
         run: |
-          cp examples/android-widget/app/build/outputs/apk/release/app-release.apk \
+          mkdir -p examples/android-widget/app/build/outputs/apk/release/
+          cp ${{ steps.find_release_apk.outputs.apk_path }} \
             examples/android-widget/app/build/outputs/apk/release/migoku-widget-${{ steps.git_hash.outputs.hash }}-${{ steps.build_time.outputs.time }}.apk
 
       - name: Upload Debug APK Artifact
