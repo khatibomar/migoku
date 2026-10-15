@@ -40,6 +40,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # 'tools' is no longer published in the SDK repository; installing it
+          # makes sdkmanager exit 1. Gradle downloads platform/build-tools itself.
+          packages: 'platform-tools'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
