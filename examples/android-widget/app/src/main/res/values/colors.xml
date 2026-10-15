@@ -1,14 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_dark">#0A002A</color>
-    <color name="card_bg">#2615102E</color>
+    <!-- Migaku brand palette: rose/crimson + violet on a deep plum surface -->
+    <color name="bg_dark">#07030F</color>
+    <color name="widget_surface">#170B2B</color>
+    <color name="widget_glass">#1AFFFFFF</color>
+    <color name="widget_glass_border">#33FFFFFF</color>
+
+    <!-- Brand accents -->
     <color name="migaku_crimson">#E11D48</color>
-    <color name="migaku_violet">#7C3AED</color>
+    <color name="migaku_crimson_dark">#BE123C</color>
     <color name="migaku_rose">#FDA4AF</color>
-    <color name="stat_known">#34D399</color>
-    <color name="stat_known_label">#A7F3D0</color>
-    <color name="stat_learning">#38BDF8</color>
-    <color name="stat_learning_label">#BAE6FD</color>
+    <color name="migaku_pink">#FB7185</color>
+    <color name="migaku_violet">#7C3AED</color>
+    <color name="migaku_violet_light">#A78BFA</color>
+    <color name="migaku_lilac">#DDD6FE</color>
+
+    <!-- Stat cards -->
+    <color name="stat_known">#A78BFA</color>
+    <color name="stat_known_label">#DDD6FE</color>
+    <color name="stat_known_bg">#24A78BFA</color>
+    <color name="stat_known_border">#59A78BFA</color>
+    <color name="stat_known_highlight">#40A78BFA</color>
+    <color name="stat_learning">#FB7185</color>
+    <color name="stat_learning_label">#FECDD3</color>
+    <color name="stat_learning_bg">#24FB7185</color>
+    <color name="stat_learning_border">#59FB7185</color>
+    <color name="stat_learning_highlight">#40FB7185</color>
+
+    <!-- Progress: violet -> rose brand sweep, matching the card order -->
+    <color name="progress_start">#8B5CF6</color>
+    <color name="progress_mid">#DB2777</color>
+    <color name="progress_end">#E11D48</color>
+
+    <!-- Text -->
     <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#94A3B8</color>
+    <color name="text_secondary">#B6A9D4</color>
+    <color name="text_muted">#7C6F9E</color>
+
     <color name="glass_border">#38FFFFFF</color>
+    <color name="badge_ja_bg">#33E11D48</color>
+    <color name="badge_ja_border">#80E11D48</color>
+    <color name="badge_ja_text">#FDA4AF</color>
+
+    <color name="error_bg">#33F43F5E</color>
+    <color name="error_text">#FCA5A5</color>
+
+    <color name="input_bg">#1C0F31</color>
+    <color name="input_border">#3B2A5E</color>
 </resources>

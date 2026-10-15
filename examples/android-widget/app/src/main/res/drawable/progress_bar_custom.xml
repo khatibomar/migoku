@@ -1,21 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Background track: frosted translucent glass track -->
+    <!-- Background track: frosted translucent glass track with subtle border -->
     <item android:id="@android:id/background">
         <shape android:shape="rectangle">
             <corners android:radius="4dp" />
-            <solid android:color="#26FFFFFF" />
+            <solid android:color="#20FFFFFF" />
+            <stroke android:width="0.8dp" android:color="#30FFFFFF" />
         </shape>
     </item>
-    <!-- Progress fill: Migaku emerald to sky blue gradient -->
+    <!-- Progress fill: Migaku violet to rose sweep -->
     <item android:id="@android:id/progress">
         <clip>
             <shape android:shape="rectangle">
                 <corners android:radius="4dp" />
                 <gradient
                     android:angle="0"
-                    android:startColor="#10B981"
-                    android:endColor="#38BDF8" />
+                    android:startColor="@color/progress_start"
+                    android:centerColor="@color/progress_mid"
+                    android:endColor="@color/progress_end" />
             </shape>
         </clip>
     </item>

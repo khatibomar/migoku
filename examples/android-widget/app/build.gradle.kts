@@ -72,9 +72,10 @@ android {
                 "proguard-rules.pro"
             )
             // Use the stable key when provided; otherwise fall back to the
-            // (per-machine) debug key so local/unsigned development builds
-            // still produce an installable APK.
+            // (per-machine) debug key so release builds still produce an
+            // installable, signed APK without stable signing secrets.
             signingConfig = signingConfigs.findByName("stable")
+                ?: signingConfigs.getByName("debug")
         }
     }
 

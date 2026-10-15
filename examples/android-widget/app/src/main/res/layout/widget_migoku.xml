@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="16dp">
 
     <!-- Header: Migaku Avatar + Title + Refresh Button -->
     <LinearLayout
@@ -17,8 +17,8 @@
         <!-- Migaku GitHub Avatar Image -->
         <ImageView
             android:id="@+id/img_migaku_avatar"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
             android:contentDescription="@string/app_name"
             android:scaleType="centerCrop"
             android:src="@drawable/ic_migaku_logo" />
@@ -26,7 +26,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="12dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -39,20 +39,20 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Migaku"
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp"
+                    android:text="Migoku"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
+                    android:layout_marginStart="8dp"
                     android:background="@drawable/badge_ja_bg"
-                    android:paddingHorizontal="6dp"
-                    android:paddingVertical="1dp"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
                     android:text="🇯🇵 JA"
-                    android:textColor="#FDA4AF"
+                    android:textColor="@color/badge_ja_text"
                     android:textSize="10sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -61,18 +61,19 @@
                 android:id="@+id/tv_last_updated"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:text="Synced: --:--"
-                android:textColor="#94A3B8"
-                android:textSize="10sp" />
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
         </LinearLayout>
 
         <ImageButton
             android:id="@+id/btn_refresh"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Refresh"
-            android:padding="6dp"
+            android:padding="8dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_refresh" />
     </LinearLayout>
@@ -82,10 +83,11 @@
         android:id="@+id/tv_error_message"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="14dp"
         android:gravity="center"
+        android:padding="12dp"
         android:text="Connecting to Migoku..."
-        android:textColor="#FF8A80"
+        android:textColor="@color/error_text"
         android:textSize="12sp"
         android:visibility="gone" />
 
@@ -94,7 +96,7 @@
         android:id="@+id/layout_stats_content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         android:orientation="vertical">
 
         <!-- Known & Learning Cards Row -->
@@ -107,58 +109,64 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
+                android:layout_marginEnd="7dp"
                 android:layout_weight="1"
                 android:background="@drawable/stat_card_known"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:paddingVertical="8dp">
+                android:paddingVertical="14dp"
+                android:paddingHorizontal="12dp">
 
                 <TextView
                     android:id="@+id/tv_known_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0"
-                    android:textColor="#34D399"
-                    android:textSize="18sp"
+                    android:textColor="@color/stat_known"
+                    android:textSize="22sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
                     android:text="✓ KNOWN"
-                    android:textColor="#A7F3D0"
+                    android:textColor="@color/stat_known_label"
                     android:textSize="10sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:letterSpacing="0.06" />
             </LinearLayout>
 
             <!-- Learning Count Card -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="7dp"
                 android:layout_weight="1"
                 android:background="@drawable/stat_card_learning"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:paddingVertical="8dp">
+                android:paddingVertical="14dp"
+                android:paddingHorizontal="12dp">
 
                 <TextView
                     android:id="@+id/tv_learning_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0"
-                    android:textColor="#38BDF8"
-                    android:textSize="18sp"
+                    android:textColor="@color/stat_learning"
+                    android:textSize="22sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
                     android:text="→ LEARNING"
-                    android:textColor="#BAE6FD"
+                    android:textColor="@color/stat_learning_label"
                     android:textSize="10sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:letterSpacing="0.06" />
             </LinearLayout>
         </LinearLayout>
 
@@ -167,8 +175,8 @@
             android:id="@+id/progress_horizontal"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="6dp"
-            android:layout_marginTop="10dp"
+            android:layout_height="7dp"
+            android:layout_marginTop="14dp"
             android:max="100"
             android:progress="0"
             android:progressDrawable="@drawable/progress_bar_custom" />
@@ -177,7 +185,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal">
 
             <TextView
@@ -186,16 +194,16 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Total: --"
-                android:textColor="#94A3B8"
-                android:textSize="11sp" />
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/tv_progress_percent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0%"
-                android:textColor="#FFFFFF"
-                android:textSize="11sp"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
