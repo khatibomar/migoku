@@ -311,6 +311,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DueStats"
+  /api/v1/stats/schedule:
+    get:
+      tags: [Stats]
+      summary: Get the review forecast used to plan study sessions
+      description: |
+        Returns how many cards come up for review per day, starting at the SRS
+        active day. This is the same forecast the Migaku SRS app shows, derived
+        from card due dates. It is read-only: the SRS database is a downloaded
+        snapshot, so there is no stored study plan to set.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: lang
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: deckId
+          schema:
+            type: string
+        - in: query
+          name: days
+          schema:
+            type: integer
+            default: 7
+            description: How many days of forecast to return (max 90)
+      responses:
+        "200":
+          description: Study schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
   /api/v1/stats/intervals:
     get:
       tags: [Stats]
@@ -589,6 +623,42 @@ components:
           type: array
           items:
             type: integer
+    ScheduleDay:
+      type: object
+      properties:
+        date:
+          type: string
+          description: ISO date (YYYY-MM-DD) the cards come up on
+        due_count:
+          type: integer
+        learning_count:
+          type: integer
+        known_count:
+          type: integer
+      required: [date, due_count, learning_count, known_count]
+    Schedule:
+      type: object
+      properties:
+        language:
+          type: string
+        today:
+          type: string
+          description: ISO date (YYYY-MM-DD) the forecast starts on
+        due_today:
+          type: integer
+          description: Cards due on the first day of the forecast
+        learning_today:
+          type: integer
+        known_today:
+          type: integer
+        overdue:
+          type: integer
+          description: Cards that came due before the forecast window and are still pending
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleDay"
+      required: [language, today, due_today, learning_today, known_today, overdue, days]
     IntervalStats:
       type: object
       properties:

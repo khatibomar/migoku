@@ -355,6 +355,39 @@ func (app *Application) handleDueStats(w http.ResponseWriter, r *http.Request) {
 	app.respondJSON(w, r, stats)
 }
 
+func (app *Application) handleSchedule(w http.ResponseWriter, r *http.Request) {
+	client, ok := app.requireClient(w, r)
+	if !ok {
+		return
+	}
+
+	lang := r.URL.Query().Get("lang")
+	if lang == "" {
+		app.writeJSONError(w, r, http.StatusBadRequest, "lang is required")
+		return
+	}
+
+	deckID := r.URL.Query().Get("deckId")
+
+	days := defaultScheduleDays
+	if raw := r.URL.Query().Get("days"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed <= 0 {
+			app.writeJSONError(w, r, http.StatusBadRequest, "days must be a positive integer")
+			return
+		}
+		days = parsed
+	}
+
+	schedule, err := app.service.GetSchedule(r.Context(), client, lang, deckID, days)
+	if err != nil {
+		app.logger.Error("Failed to get schedule", slog.String("error", err.Error()))
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	app.respondJSON(w, r, schedule)
+}
+
 func (app *Application) handleIntervalStats(w http.ResponseWriter, r *http.Request) {
 	client, ok := app.requireClient(w, r)
 	if !ok {
@@ -406,7 +439,7 @@ func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request)
 func (app *Application) handleStatus(w http.ResponseWriter, r *http.Request) {
 	app.respondJSON(w, r, map[string]any{
 		"status":    "running",
-		"cache_ttl": app.cache.ttl.String(),
+		"cache_ttl": app.cache.TTL().String(),
 	})
 }
 

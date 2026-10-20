@@ -528,26 +528,8 @@ func (s *MigakuService) GetDueStats(ctx context.Context, client *MigakuClient, l
 		}
 	}
 
-	currentDate := time.Now()
-	currentDate = time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, currentDate.Location())
-
-	type currentDateRow struct {
-		Entry string `db:"entry" json:"entry"`
-	}
-
-	dateRows, err := runQuery[currentDateRow](ctx, client, `
-SELECT entry
-FROM keyValue
-WHERE key = 'study.activeDay.currentDate';`)
-	if err == nil && len(dateRows) > 0 && dateRows[0].Entry != "" {
-		if parsed, parseErr := time.Parse("2006-01-02", dateRows[0].Entry); parseErr == nil {
-			currentDate = time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, currentDate.Location())
-		}
-	}
-
+	currentDate, currentDayNumber := resolveStudyDay(ctx, client)
 	chartStartDate := time.Date(2020, time.January, 1, 0, 0, 0, 0, currentDate.Location())
-	currentDelta := currentDate.UnixMilli() - chartStartDate.UnixMilli()
-	currentDayNumber := int(currentDelta / msPerDay)
 
 	var forecastDays int
 	var endDayNumber int
@@ -597,33 +579,7 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 
 	actualForecastDays := endDayNumber - currentDayNumber + 1
 
-	type dueRow struct {
-		Due           int    `db:"due"            json:"due"`
-		IntervalRange string `db:"interval_range" json:"interval_range"`
-		Count         int    `db:"count"          json:"count"`
-	}
-
-	query := `
-  SELECT
-    due,
-    CASE
-      WHEN c.interval < 20 THEN 'learning'
-      ELSE 'known'
-    END as interval_range,
-    COUNT(*) as count
-  FROM card c
-  JOIN card_type ct ON c.cardTypeId = ct.id
-  WHERE ct.lang = ? AND c.due BETWEEN ? AND ? AND c.del = 0`
-
-	params := []any{lang, currentDayNumber, endDayNumber}
-	useDeckFilter := deckID != "" && deckID != cacheAllKey
-	if useDeckFilter {
-		query += deckIDClause
-		params = append(params, deckID)
-	}
-	query += " GROUP BY due, interval_range ORDER BY due;"
-
-	rows, err := runQuery[dueRow](ctx, client, query, params...)
+	rows, err := queryDueForecast(ctx, client, lang, deckID, currentDayNumber, endDayNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -679,6 +635,190 @@ WHERE ct.lang = ? AND c.due >= ? AND c.del = 0`
 
 	s.cache.Set(cacheKey, stats)
 	return stats, nil
+}
+
+const (
+	// defaultScheduleDays is how many days of forecast /stats/schedule returns
+	// when the caller does not ask for a specific window.
+	defaultScheduleDays = 7
+	// maxScheduleDays caps how far ahead a caller may ask for.
+	maxScheduleDays = 90
+	// overdueLookbackDays is how far back overdue cards are counted. SRS due
+	// days are absolute, so a user who has not studied in a while accumulates
+	// cards that are already overdue; those still deserve a reminder.
+	overdueLookbackDays = 60
+)
+
+// dueForecastRow is one bucket of the SRS review forecast.
+type dueForecastRow struct {
+	Due           int    `db:"due"            json:"due"`
+	IntervalRange string `db:"interval_range" json:"interval_range"`
+	Count         int    `db:"count"          json:"count"`
+}
+
+// ScheduleDay describes how many cards come up for review on a given day.
+type ScheduleDay struct {
+	Date          string `json:"date"`
+	DueCount      int    `json:"due_count"`
+	LearningCount int    `json:"learning_count"`
+	KnownCount    int    `json:"known_count"`
+}
+
+// Schedule is the review forecast the widget uses to decide whether there is
+// something to study, and therefore whether to fire a study reminder.
+type Schedule struct {
+	Language      string        `json:"language"`
+	Today         string        `json:"today"`
+	DueToday      int           `json:"due_today"`
+	LearningToday int           `json:"learning_today"`
+	KnownToday    int           `json:"known_today"`
+	Overdue       int           `json:"overdue"`
+	Days          []ScheduleDay `json:"days"`
+}
+
+// resolveStudyDay returns the SRS "active day" and its absolute day number.
+//
+// The Migaku SRS database stores due days as absolute day numbers counted from
+// 2020-01-01, and records the anchor of the current day in the keyValue table
+// under 'study.activeDay.currentDate'. Anchoring on that key keeps the
+// forecast aligned with what the SRS app itself shows; when the key is missing
+// or unparseable we fall back to the real calendar date.
+func resolveStudyDay(ctx context.Context, client *MigakuClient) (time.Time, int) {
+	currentDate := time.Now()
+	currentDate = time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, currentDate.Location())
+
+	type currentDateRow struct {
+		Entry string `db:"entry" json:"entry"`
+	}
+
+	dateRows, err := runQuery[currentDateRow](ctx, client, `
+SELECT entry
+FROM keyValue
+WHERE key = 'study.activeDay.currentDate';`)
+	if err == nil && len(dateRows) > 0 && dateRows[0].Entry != "" {
+		if parsed, parseErr := time.Parse("2006-01-02", dateRows[0].Entry); parseErr == nil {
+			currentDate = time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, currentDate.Location())
+		}
+	}
+
+	chartStartDate := time.Date(2020, time.January, 1, 0, 0, 0, 0, currentDate.Location())
+	currentDelta := currentDate.UnixMilli() - chartStartDate.UnixMilli()
+	return currentDate, int(currentDelta / msPerDay)
+}
+
+// queryDueForecast returns the number of cards due per day in the inclusive
+// range [startDay, endDay], split into learning and known cards.
+func queryDueForecast(
+	ctx context.Context,
+	client *MigakuClient,
+	lang, deckID string,
+	startDay, endDay int,
+) ([]dueForecastRow, error) {
+	query := `
+  SELECT
+    due,
+    CASE
+      WHEN c.interval < 20 THEN 'learning'
+      ELSE 'known'
+    END as interval_range,
+    COUNT(*) as count
+  FROM card c
+  JOIN card_type ct ON c.cardTypeId = ct.id
+  WHERE ct.lang = ? AND c.due BETWEEN ? AND ? AND c.del = 0`
+
+	params := []any{lang, startDay, endDay}
+	if deckID != "" && deckID != cacheAllKey {
+		query += deckIDClause
+		params = append(params, deckID)
+	}
+	query += " GROUP BY due, interval_range ORDER BY due;"
+
+	return runQuery[dueForecastRow](ctx, client, query, params...)
+}
+
+// GetSchedule returns the review forecast for the next days days, starting at
+// the SRS active day. It is the read-only counterpart of the study plan the SRS
+// app derives from card due dates; there is no stored schedule to write to.
+func (s *MigakuService) GetSchedule(
+	ctx context.Context,
+	client *MigakuClient,
+	lang, deckID string,
+	days int,
+) (*Schedule, error) {
+	if lang == "" {
+		return nil, errors.New("lang parameter is required")
+	}
+	if days <= 0 {
+		days = defaultScheduleDays
+	}
+	if days > maxScheduleDays {
+		days = maxScheduleDays
+	}
+
+	cacheKey := s.scopedCacheKey(client, fmt.Sprintf("stats:schedule:%s:%s:%d", lang, deckID, days))
+	if cached, ok := s.cache.Get(cacheKey); ok {
+		if sc, ok := cached.(*Schedule); ok {
+			return sc, nil
+		}
+	}
+
+	currentDate, currentDayNumber := resolveStudyDay(ctx, client)
+	endDayNumber := currentDayNumber + days - 1
+
+	// Pull in the days before the active day as well, so overdue cards are
+	// reported separately instead of silently dropped.
+	rows, err := queryDueForecast(
+		ctx, client, lang, deckID,
+		currentDayNumber-overdueLookbackDays, endDayNumber,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	schedule := &Schedule{
+		Language: lang,
+		Today:    currentDate.Format("2006-01-02"),
+		Days:     make([]ScheduleDay, 0, days),
+	}
+
+	byDay := make(map[int]ScheduleDay, days)
+	for i := range days {
+		date := currentDate.AddDate(0, 0, i)
+		byDay[currentDayNumber+i] = ScheduleDay{Date: date.Format("2006-01-02")}
+	}
+
+	for _, row := range rows {
+		if row.Due < currentDayNumber {
+			schedule.Overdue += row.Count
+			continue
+		}
+
+		day, ok := byDay[row.Due]
+		if !ok {
+			continue
+		}
+		switch row.IntervalRange {
+		case "learning":
+			day.LearningCount += row.Count
+		case "known":
+			day.KnownCount += row.Count
+		}
+		day.DueCount += row.Count
+		byDay[row.Due] = day
+	}
+
+	for i := range days {
+		day := byDay[currentDayNumber+i]
+		schedule.Days = append(schedule.Days, day)
+		if i == 0 {
+			schedule.DueToday = day.DueCount
+			schedule.LearningToday = day.LearningCount
+			schedule.KnownToday = day.KnownCount
+		}
+	}
+
+	s.cache.Set(cacheKey, schedule)
+	return schedule, nil
 }
 
 func (s *MigakuService) GetIntervalStats(

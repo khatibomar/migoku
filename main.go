@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -24,7 +25,45 @@ type Application struct {
 	secretKey string
 	serverURL string
 
-	accounts map[string]*MigakuClient
+	accountsMu sync.RWMutex
+	accounts   map[string]*MigakuClient
+}
+
+// getAccount returns the client registered for the given API key.
+func (app *Application) getAccount(apiKey string) (*MigakuClient, bool) {
+	app.accountsMu.RLock()
+	defer app.accountsMu.RUnlock()
+
+	client, ok := app.accounts[apiKey]
+	return client, ok
+}
+
+// setAccount registers a client for the given API key.
+func (app *Application) setAccount(apiKey string, client *MigakuClient) {
+	app.accountsMu.Lock()
+	defer app.accountsMu.Unlock()
+
+	app.accounts[apiKey] = client
+}
+
+// deleteAccount removes the client registered for the given API key.
+func (app *Application) deleteAccount(apiKey string) {
+	app.accountsMu.Lock()
+	defer app.accountsMu.Unlock()
+
+	delete(app.accounts, apiKey)
+}
+
+// listAccounts returns a snapshot of the registered clients.
+func (app *Application) listAccounts() []*MigakuClient {
+	app.accountsMu.RLock()
+	defer app.accountsMu.RUnlock()
+
+	clients := make([]*MigakuClient, 0, len(app.accounts))
+	for _, client := range app.accounts {
+		clients = append(clients, client)
+	}
+	return clients
 }
 
 var _, longVersion, _ = FromBuildInfo()
@@ -126,6 +165,7 @@ func realMain(logger *slog.Logger) error {
 	v1.HandleFunc("GET /words/difficult", chainMiddlewares(app.handleDifficultWords, app.authMiddleware))
 	v1.HandleFunc("GET /stats/words", chainMiddlewares(app.handleWordStats, app.authMiddleware))
 	v1.HandleFunc("GET /stats/due", chainMiddlewares(app.handleDueStats, app.authMiddleware))
+	v1.HandleFunc("GET /stats/schedule", chainMiddlewares(app.handleSchedule, app.authMiddleware))
 	v1.HandleFunc("GET /stats/intervals", chainMiddlewares(app.handleIntervalStats, app.authMiddleware))
 	v1.HandleFunc("GET /stats/study", chainMiddlewares(app.handleStudyStats, app.authMiddleware))
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
@@ -138,7 +178,7 @@ func realMain(logger *slog.Logger) error {
 	mux.Handle("/dev/", http.StripPrefix("/dev", dev))
 
 	logger.Info("Server starting", "url", "http://localhost:"+port)
-	logger.Info("Cache TTL", "ttl", cache.ttl.String())
+	logger.Info("Cache TTL", "ttl", cache.TTL().String())
 
 	server := &http.Server{
 		Addr:              ":" + port,
@@ -165,7 +205,7 @@ func realMain(logger *slog.Logger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	for _, client := range app.accounts {
+	for _, client := range app.listAccounts() {
 		if client != nil {
 			client.Close()
 		}

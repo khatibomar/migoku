@@ -139,6 +139,7 @@ make examples
 | GET | /api/v1/decks | Get all active decks | Decks |
 | GET | /api/v1/stats/due | Get forecast of cards due per day for a given period | Stats |
 | GET | /api/v1/stats/intervals | Get distribution of card intervals | Stats |
+| GET | /api/v1/stats/schedule | Get the review forecast used to plan study sessions | Stats |
 | GET | /api/v1/stats/study | Get study statistics over a time period | Stats |
 | GET | /api/v1/stats/words | Get aggregated word status counts for a language | Stats |
 | GET | /api/v1/status/counts | Get aggregated word status counts | Counts |
