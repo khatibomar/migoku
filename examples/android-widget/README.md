@@ -11,12 +11,15 @@ Included in this directory:
 ## Features
 
 - **Live Japanese Progress**: Fetches your word counts via `GET /api/v1/status/counts?lang=ja`.
+- **Review Forecast**: Fetches how many cards come up per day via `GET /api/v1/stats/schedule?lang=ja` and shows a "N due today" chip on the widget.
+- **Study Reminder**: Fires a notification at the study time you set, but only when cards are actually due.
 - **Known & Learning Counters**: Highlights words mastered vs words in progress.
 - **Progress Ratio & Bar**: Visual breakdown of your vocabulary progress.
 - **Design Plate + Vector Artwork**: the glass background (sky, Mount Fuji, pagoda, cherry blossoms) is the supplied artwork plate in `res/drawable-nodpi/widget_plate.webp`, with rounded corners and a feathered alpha edge so the widget reads as a sheet of glass over the wallpaper; everything on top of it - hinomaru medallion, metric tiles, chevron, progress bars - is vector.
 - **Responsive Layout**: columns are driven by weights, so the design holds together from a wide 4x2 placement to a squarer resized one.
 - **Manual Tap-to-Refresh**: Tap either metric card to refresh on demand; tap the greeting to reopen the settings screen.
 - **Automatic Background Sync**: Schedules background refresh using Android's WorkManager.
+- **Offline Resilience**: The last successful counts are cached on the device. If a background refresh fails (offline, Doze, Wi-Fi still reconnecting) the widget keeps showing those numbers instead of flipping to an "unreachable" error, and transient failures are retried with backoff. The "unreachable" banner is only shown when there is no cached data at all, so the widget recovers on its own without re-adding it.
 - **Configuration Activity**: Enter your Migoku server URL, API key, and target language directly from your phone.
 
 ---
@@ -53,22 +56,32 @@ examples/android-widget/
 ├── settings.gradle.kts
 ├── build.gradle.kts
 ├── gradle.properties
+├── generate-icons.py                # regenerates res/mipmap-* from the artwork
+├── assets/
+│   └── migaku-icon.png              # source artwork for the launcher icon
 └── app/
     ├── build.gradle.kts
     └── src/
         ├── debug/                       # Preview activity only, never shipped in release
         │   ├── AndroidManifest.xml
         │   └── java/com/migoku/widget/debug/WidgetPreviewActivity.kt
+        ├── test/                       # JVM unit tests (study time parsing)
         └── main/
             ├── AndroidManifest.xml
             ├── java/com/migoku/widget/
-            │   ├── MigokuApiClient.kt       # Migoku stats API client
+            │   ├── MigokuApiClient.kt       # Migoku stats + schedule API client
             │   ├── MigokuWidgetProvider.kt  # AppWidgetProvider & RemoteViews logic
             │   ├── MigokuWidgetWorker.kt    # Jetpack WorkManager background worker
+            │   ├── StudyReminderScheduler.kt # Daily "time to study" alarm
+            │   ├── StudyReminderReceiver.kt  # Alarm receiver, posts the reminder
+            │   ├── StudyReminderNotifier.kt  # Decides whether there is anything due
+            │   ├── StudyNotifications.kt     # Notification channel + builder
             │   └── WidgetConfigActivity.kt  # Setup screen on widget placement
             └── res/
                 ├── drawable/                # Vector artwork, card surfaces, progress bars
                 ├── drawable-nodpi/          # widget_plate.webp (design background, alpha corners)
+                ├── mipmap-anydpi-v26/       # Adaptive launcher icon
+                ├── mipmap-*/                # Generated launcher icon layers per density
                 ├── layout/
                 │   ├── widget_migoku.xml    # Widget RemoteViews layout
                 │   └── activity_widget_config.xml
@@ -100,6 +113,29 @@ cd examples/android-widget
 ```
 
 The APK will be generated at `app/build/outputs/apk/debug/app-debug.apk`.
+
+### Launcher Icon
+
+The app icon is the character artwork in `assets/migaku-icon.png`. The
+`res/mipmap-*` folders are **generated** from it, so the source file is the
+single place to change:
+
+```bash
+cd examples/android-widget
+python3 generate-icons.py            # needs pillow + numpy
+```
+
+The artwork is a square, full-body character on an orange-to-red gradient, which
+does not fit Android's adaptive-icon geometry on its own. The generator:
+
+- models the artwork's background as a bilinear gradient and extends it across
+  the whole 108dp layer, so the background continues past the artwork's edge;
+- places the artwork inside the 66dp safe zone as the foreground layer.
+
+Because the artwork *is* that gradient, the two layers meet without a visible
+seam, and the launcher can then mask the result to any shape (circle,
+squircle, ...). Legacy PNGs are written too, for launchers and the widget
+picker that do not use adaptive icons.
 
 ### Installing updates (why updates used to be rejected)
 
@@ -165,6 +201,69 @@ Response payload:
   }
 ]
 ```
+
+The widget also queries the review forecast:
+
+```http
+GET /api/v1/stats/schedule?lang=ja&days=7 HTTP/1.1
+Host: <migoku-host>
+X-Api-Key: <your-api-key>
+Accept: application/json
+```
+
+Response payload:
+```json
+{
+  "language": "ja",
+  "today": "2026-10-21",
+  "due_today": 42,
+  "learning_today": 32,
+  "known_today": 10,
+  "overdue": 3,
+  "days": [
+    { "date": "2026-10-21", "due_count": 42, "learning_count": 32, "known_count": 10 },
+    { "date": "2026-10-22", "due_count": 17, "learning_count": 9, "known_count": 8 }
+  ]
+}
+```
+
+This is the same forecast the Migaku SRS app shows ("Review Forecast"), derived
+from the `due` day of every card in the SRS database. It is **read-only**: the
+SRS database is a snapshot the server downloads from Migaku, so there is no
+stored study plan to write to. The study *time* is a per-device preference and
+lives in the widget's own storage.
+
+---
+
+## Study Reminder
+
+The widget can post a notification when it is time to study:
+
+1. Open the widget settings (tap the greeting on the widget).
+2. Set **STUDY TIME** (24-hour, e.g. `20:00`).
+3. Enable **Remind me when it is study time**, then **Save & Add Widget**.
+
+How it works:
+
+- A daily `AlarmManager` alarm is armed for that time. It re-arms itself after
+  every fire, and the widget's background refresh re-arms it too, so it
+  survives reboots and app updates.
+- When the alarm fires, the widget asks the API how many cards are due. The
+  notification is only posted when there is actually something to study, so a
+  day with nothing due stays silent.
+- If the network is unavailable at that moment, the count cached by the last
+  successful refresh is used instead.
+
+Caveats:
+
+- The alarm is **inexact** on purpose. Exact alarms need a user-granted
+  permission on Android 12+, and a study reminder is fine arriving a few
+  minutes late. It still fires through Doze.
+- On Android 13+ the app needs the **Notifications** permission. The config
+  screen asks for it when you enable the reminder; if you decline, the reminder
+  stays silent until you grant it in system settings.
+- Tapping the notification opens the widget settings so the time can be changed
+  without hunting for the widget.
 
 ---
 

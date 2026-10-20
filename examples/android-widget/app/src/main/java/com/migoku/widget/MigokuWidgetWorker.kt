@@ -29,6 +29,15 @@ class MigokuWidgetWorker(
         // Fetch stats from Migoku API
         val statsResult = MigokuApiClient.fetchJapaneseProgress(serverUrl, apiKey, lang)
 
+        // Fetch the review forecast, which is what the study reminder is built on.
+        val scheduleResult = MigokuApiClient.fetchSchedule(serverUrl, apiKey, lang)
+        val schedule = scheduleResult.getOrNull()
+        if (schedule != null) {
+            MigokuWidgetProvider.saveSchedule(prefs, schedule)
+            // Keep the daily alarm armed even if the process was killed.
+            StudyReminderScheduler.scheduleNext(context)
+        }
+
         val widgetIds = if (targetWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             intArrayOf(targetWidgetId)
         } else {
@@ -37,37 +46,68 @@ class MigokuWidgetWorker(
             )
         }
 
-        statsResult.fold(
-            onSuccess = { progress ->
-                for (id in widgetIds) {
-                    MigokuWidgetProvider.updateWidgetViews(
-                        context,
-                        appWidgetManager,
-                        id,
-                        progress
-                    )
-                }
-            },
-            onFailure = { error ->
-                val detail = error.localizedMessage ?: "Error"
-                val message = "${context.getString(R.string.status_offline)} ($detail)"
-                for (id in widgetIds) {
-                    MigokuWidgetProvider.updateWidgetViews(
-                        context,
-                        appWidgetManager,
-                        id,
-                        progress = null,
-                        errorMessage = message
-                    )
-                }
+        val error = statsResult.exceptionOrNull()
+        if (error == null) {
+            val progress = statsResult.getOrThrow()
+            // Remember the good response so the next blip can fall back to it.
+            MigokuWidgetProvider.saveLastProgress(prefs, progress)
+            // The schedule fetch can fail on its own; keep the last known count.
+            val dueToday = schedule?.dueToday
+                ?: MigokuWidgetProvider.loadSchedule(prefs)?.dueToday
+                ?: 0
+            for (id in widgetIds) {
+                MigokuWidgetProvider.updateWidgetViews(
+                    context,
+                    appWidgetManager,
+                    id,
+                    progress,
+                    dueToday = dueToday
+                )
             }
-        )
+            return@withContext Result.success()
+        }
 
-        Result.success()
+        // Failure path. Prefer the last good numbers over a dead "can't reach host"
+        // screen: a transient network failure should never blank the widget.
+        val cached = MigokuWidgetProvider.loadLastProgress(prefs)
+        if (cached != null) {
+            val cachedSchedule = MigokuWidgetProvider.loadSchedule(prefs)
+            for (id in widgetIds) {
+                MigokuWidgetProvider.updateWidgetViews(
+                    context,
+                    appWidgetManager,
+                    id,
+                    cached,
+                    dueToday = cachedSchedule?.dueToday ?: 0
+                )
+            }
+        } else {
+            val detail = error.localizedMessage ?: "Error"
+            val message = "${context.getString(R.string.status_offline)} ($detail)"
+            for (id in widgetIds) {
+                MigokuWidgetProvider.updateWidgetViews(
+                    context,
+                    appWidgetManager,
+                    id,
+                    progress = null,
+                    errorMessage = message
+                )
+            }
+        }
+
+        // Transient failures are retried (with backoff) so the widget recovers on
+        // its own; permanent ones (bad key, 404, ...) are not worth hammering.
+        val transient = error is MigokuApiException && error.isTransient
+        if (transient && runAttemptCount < MAX_TRANSIENT_ATTEMPTS) {
+            Result.retry()
+        } else {
+            Result.success()
+        }
     }
 
     companion object {
         const val EXTRA_WIDGET_ID = "extra_widget_id"
+        private const val MAX_TRANSIENT_ATTEMPTS = 3
 
         fun enqueueImmediateUpdate(context: Context, widgetId: Int) {
             val inputData = Data.Builder()

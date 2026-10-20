@@ -72,6 +72,7 @@ class WidgetPreviewActivity : Activity() {
         text(R.id.tv_learning_total, "/ 1,500")
         text(R.id.tv_known_count, "1,420")
         text(R.id.tv_known_total, "/ 1,500")
+        text(R.id.tv_due_today, "38 due today")
         widget.findViewById<ProgressBar>(R.id.progress_learning).progress = 2
         widget.findViewById<ProgressBar>(R.id.progress_known).progress = 95
     }

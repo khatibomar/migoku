@@ -8,6 +8,7 @@
     <string name="widget_title">がんばろう！</string>
     <string name="widget_subtitle">Keep going!</string>
     <string name="status_offline">Offline or unreachable</string>
+    <string name="widget_due_none">Nothing due today</string>
 
     <!-- Metric cards -->
     <string name="label_learning">Learning</string>
@@ -19,8 +20,33 @@
     <string name="config_server_url_label">MIGOKU SERVER URL</string>
     <string name="config_api_key_label">API KEY (X-API-KEY)</string>
     <string name="config_lang_label">LANGUAGE CODE</string>
+    <string name="config_study_time_label">STUDY TIME (24H)</string>
+    <string name="config_reminder_label">Remind me when it is study time</string>
     <string name="config_save">Save &amp; Add Widget</string>
     <string name="config_note">Note: For Android Emulator, use http://10.0.2.2:8080 to connect to your host machine. For physical devices on Wi-Fi, use your local PC IP address.</string>
+    <string name="config_reminder_note">The reminder fires at the study time you set, but only when cards are actually due. Android may deliver it a few minutes late, and it needs notification permission (Android 13+).</string>
     <string name="error_server_url_required">Please enter Migoku server URL</string>
+    <string name="error_study_time_invalid">Please enter the study time as HH:MM (24-hour)</string>
     <string name="toast_settings_saved">Settings saved! Fetching Japanese stats…</string>
+    <string name="toast_notifications_denied">Notifications are blocked, so the study reminder will not appear. Enable them in system settings.</string>
+
+    <!-- Study reminder notification -->
+    <string name="notification_channel_name">Study reminders</string>
+    <string name="notification_channel_description">Reminds you when it is time to study and cards are due.</string>
+    <string name="notification_title">Time to study! がんばろう！</string>
+
+    <plurals name="notification_due_today">
+        <item quantity="one">%d card due today</item>
+        <item quantity="other">%d cards due today</item>
+    </plurals>
+
+    <plurals name="notification_overdue">
+        <item quantity="one">%d card overdue</item>
+        <item quantity="other">%d cards overdue</item>
+    </plurals>
+
+    <plurals name="widget_due_today">
+        <item quantity="one">%d due today</item>
+        <item quantity="other">%d due today</item>
+    </plurals>
 </resources>

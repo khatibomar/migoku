@@ -103,6 +103,22 @@
                         android:textSize="9sp" />
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Review forecast: how much is due today. -->
+            <TextView
+                android:id="@+id/tv_due_today"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_due_chip"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:text="@string/widget_due_none"
+                android:textColor="@color/chip_text"
+                android:textSize="10sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <!-- Metric cards -->

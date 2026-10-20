@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Adaptive launcher icon.
+
+    The foreground holds the character artwork inside the 66dp safe zone and the
+    background continues the artwork's own orange-to-red gradient past its
+    edges, so the two layers meet without a visible seam. The launcher then
+    masks the result to whatever shape it uses (circle, squircle, ...).
+
+    Regenerate the mipmaps with: python3 generate-icons.py
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

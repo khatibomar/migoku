@@ -73,6 +73,11 @@ jobs:
             echo "No stable signing secret found; release build will be produced without stable signing."
           fi
 
+      - name: Run unit tests
+        run: |
+          cd examples/android-widget
+          ./gradlew testDebugUnitTest --no-daemon
+
       - name: Build Debug APK
         env:
           MIGOKU_GIT_HASH: ${{ github.sha }}

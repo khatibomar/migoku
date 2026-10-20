@@ -57,6 +57,11 @@
     <color name="error_stroke">#80FFFFFF</color>
     <color name="error_text">#FFFFFFFF</color>
 
+    <!-- "Due today" chip -->
+    <color name="chip_fill">#66203252</color>
+    <color name="chip_stroke">#59FFFFFF</color>
+    <color name="chip_text">#FFFFFFFF</color>
+
     <!-- Configuration screen (light) -->
     <color name="bg_light">#E9F2FC</color>
     <color name="input_bg">#FFFFFFFF</color>
