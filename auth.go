@@ -64,7 +64,7 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 		app.writeJSONError(w, r, http.StatusInternalServerError, "Server misconfigured")
 		return
 	}
-	if _, exists := app.accounts[apiKey]; exists {
+	if _, exists := app.getAccount(apiKey); exists {
 		if err := encode(w, r, http.StatusOK, map[string]string{
 			"api_key": apiKey,
 			msgKey:    "Already logged in",
@@ -79,7 +79,7 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 		app.logger,
 		email,
 		password,
-		app.cache.ttl,
+		app.cache.TTL(),
 	)
 	if err != nil {
 		app.logger.Error("Failed to initialize client", "error", err)
@@ -87,7 +87,7 @@ func (app *Application) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.accounts[apiKey] = db
+	app.setAccount(apiKey, db)
 	if err := encode(w, r, http.StatusOK, map[string]string{
 		"api_key": apiKey,
 		msgKey:    "Login successful",
@@ -108,7 +108,7 @@ func (app *Application) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, exists := app.accounts[apiKey]
+	db, exists := app.getAccount(apiKey)
 	if !exists || db == nil {
 		app.writeJSONError(w, r, http.StatusUnauthorized, "Not logged in")
 		return
@@ -118,7 +118,7 @@ func (app *Application) handleLogout(w http.ResponseWriter, r *http.Request) {
 		db.cleanUp()
 	}
 
-	delete(app.accounts, apiKey)
+	app.deleteAccount(apiKey)
 	if err := encode(w, r, http.StatusOK, map[string]string{
 		msgKey: "Logout successful",
 	}); err != nil {
@@ -134,7 +134,7 @@ func (app *Application) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		client, exists := app.accounts[apiKey]
+		client, exists := app.getAccount(apiKey)
 		if !exists || client == nil {
 			app.writeJSONError(w, r, http.StatusUnauthorized, "Invalid or expired API key")
 			return

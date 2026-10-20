@@ -49,14 +49,14 @@ const languageFilterClause = " AND language = ?"
 func statusToUpdate(status string) (wordStatusUpdate, bool) {
 	normalized := strings.ToLower(strings.TrimSpace(status))
 	switch normalized {
-	case "known":
-		return wordStatusUpdate{KnownStatus: "KNOWN", Tracked: false}, true
-	case "learning":
-		return wordStatusUpdate{KnownStatus: "LEARNING", Tracked: false}, true
-	case "ignored":
-		return wordStatusUpdate{KnownStatus: "IGNORED", Tracked: false}, true
+	case statusKnown:
+		return wordStatusUpdate{KnownStatus: dbStatusKnown, Tracked: false}, true
+	case statusLearning:
+		return wordStatusUpdate{KnownStatus: dbStatusLearning, Tracked: false}, true
+	case statusIgnored:
+		return wordStatusUpdate{KnownStatus: dbStatusIgnored, Tracked: false}, true
 	case "tracked":
-		return wordStatusUpdate{KnownStatus: "UNKNOWN", Tracked: true}, true
+		return wordStatusUpdate{KnownStatus: dbStatusUnknown, Tracked: true}, true
 	default:
 		return wordStatusUpdate{}, false
 	}
@@ -137,7 +137,7 @@ func (s *MigakuService) setWordStatusItems(
 	updateRecords := make([]wordRecord, 0, len(normalizedItems))
 	modTimestamp := time.Now().UnixMilli()
 
-	if err := client.refreshDBIfStale(ctx, s.cache.ttl); err != nil {
+	if err := client.refreshDBIfStale(ctx, s.cache.TTL()); err != nil {
 		return err
 	}
 

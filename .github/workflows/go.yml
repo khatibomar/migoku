@@ -40,3 +40,24 @@ jobs:
 
       - name: Run linting
         run: make lint
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+      NOTIFICATION_APP_ENV: "CI"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Download Go dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: make test

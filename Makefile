@@ -1,4 +1,4 @@
-.PHONY: run build clean docker-run lint examples android-widget-apk unikraft-run unikraft-update unikraft-discord-build unikraft-discord-run unikraft-discord-update unikraft-discord-sync
+.PHONY: run build clean docker-run lint test examples android-widget-apk unikraft-run unikraft-update unikraft-discord-build unikraft-discord-run unikraft-discord-update unikraft-discord-sync
 
 # Run the API server
 run: build
@@ -24,6 +24,10 @@ clean:
 # Run linting
 lint:
 	golangci-lint run --config .golangci.yml
+
+# Run tests with the race detector
+test:
+	go test -race ./...
 
 # Serve static HTML examples from ./examples
 # Open in browser:

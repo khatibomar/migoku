@@ -32,22 +32,35 @@ func NewCache(ttl time.Duration) *Cache {
 
 func (c *Cache) Get(key string) (any, bool) {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	entry, exists := c.cache[key]
+	expired := exists && time.Now().After(entry.ExpiresAt)
+	c.mu.RUnlock()
+
 	if !exists {
 		slog.Default().Debug("Cache miss", "key", key)
 		return nil, false
 	}
 
-	if time.Now().After(entry.ExpiresAt) {
-		slog.Default().Debug("Cache expired", "key", key)
-		delete(c.cache, key)
-		return nil, false
+	if !expired {
+		slog.Default().Debug("Cache hit", "key", key)
+		return entry.Data, true
 	}
 
-	slog.Default().Debug("Cache hit", "key", key)
-	return entry.Data, true
+	// The entry expired. Evicting it is a map write, so it needs the write
+	// lock; doing it under the read lock would let concurrent Get calls
+	// write the map at the same time and crash the process.
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Re-check under the write lock: a concurrent Set may have refreshed the
+	// entry between the read lock and the write lock, and that fresh entry
+	// must not be deleted.
+	if current, ok := c.cache[key]; ok && time.Now().After(current.ExpiresAt) {
+		delete(c.cache, key)
+	}
+
+	slog.Default().Debug("Cache expired", "key", key)
+	return nil, false
 }
 
 func (c *Cache) Set(key string, value any) {
@@ -75,4 +88,12 @@ func (c *Cache) RefreshTTL(newTTL time.Duration) {
 
 	c.ttl = newTTL
 	slog.Default().Debug("Cache TTL updated", "ttl", newTTL.String())
+}
+
+// TTL returns the currently configured entry lifetime.
+func (c *Cache) TTL() time.Duration {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.ttl
 }
