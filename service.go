@@ -453,10 +453,10 @@ func (s *MigakuService) GetWordStats(ctx context.Context, client *MigakuClient, 
 
 	query := `
   SELECT
-      SUM(CASE WHEN knownStatus = 'KNOWN' THEN 1 ELSE 0 END) as known_count,
-      SUM(CASE WHEN knownStatus = 'LEARNING' THEN 1 ELSE 0 END) as learning_count,
-      SUM(CASE WHEN knownStatus = 'UNKNOWN' THEN 1 ELSE 0 END) as unknown_count,
-      SUM(CASE WHEN knownStatus = 'IGNORED' THEN 1 ELSE 0 END) as ignored_count
+      COALESCE(SUM(CASE WHEN knownStatus = 'KNOWN' THEN 1 ELSE 0 END), 0) as known_count,
+      COALESCE(SUM(CASE WHEN knownStatus = 'LEARNING' THEN 1 ELSE 0 END), 0) as learning_count,
+      COALESCE(SUM(CASE WHEN knownStatus = 'UNKNOWN' THEN 1 ELSE 0 END), 0) as unknown_count,
+      COALESCE(SUM(CASE WHEN knownStatus = 'IGNORED' THEN 1 ELSE 0 END), 0) as ignored_count
   FROM WordList
   WHERE language = ? AND del = 0`
 
@@ -465,10 +465,10 @@ func (s *MigakuService) GetWordStats(ctx context.Context, client *MigakuClient, 
 	if useDeckFilter {
 		query = `
   SELECT
-    SUM(CASE WHEN w.knownStatus = 'KNOWN' THEN 1 ELSE 0 END) as known_count,
-    SUM(CASE WHEN w.knownStatus = 'LEARNING' THEN 1 ELSE 0 END) as learning_count,
-    SUM(CASE WHEN w.knownStatus = 'UNKNOWN' THEN 1 ELSE 0 END) as unknown_count,
-    SUM(CASE WHEN w.knownStatus = 'IGNORED' THEN 1 ELSE 0 END) as ignored_count
+    COALESCE(SUM(CASE WHEN w.knownStatus = 'KNOWN' THEN 1 ELSE 0 END), 0) as known_count,
+    COALESCE(SUM(CASE WHEN w.knownStatus = 'LEARNING' THEN 1 ELSE 0 END), 0) as learning_count,
+    COALESCE(SUM(CASE WHEN w.knownStatus = 'UNKNOWN' THEN 1 ELSE 0 END), 0) as unknown_count,
+    COALESCE(SUM(CASE WHEN w.knownStatus = 'IGNORED' THEN 1 ELSE 0 END), 0) as ignored_count
   FROM (
     SELECT DISTINCT w.dictForm, w.knownStatus
     FROM WordList w
@@ -1136,8 +1136,8 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0`
 	// #nosec G101 -- SQL query string, no credentials.
 	passRateQuery := `
 SELECT
-  SUM(CASE WHEN r.type = 2 THEN 1 ELSE 0 END) as successful_reviews,
-  SUM(CASE WHEN r.type = 1 THEN 1 ELSE 0 END) as failed_reviews
+  COALESCE(SUM(CASE WHEN r.type = 2 THEN 1 ELSE 0 END), 0) as successful_reviews,
+  COALESCE(SUM(CASE WHEN r.type = 1 THEN 1 ELSE 0 END), 0) as failed_reviews
 FROM review r
 JOIN card c ON r.cardId = c.id
 JOIN card_type ct ON c.cardTypeId = ct.id
@@ -1185,7 +1185,7 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND c.del = 0 AND r.del = 0 AND r.ty
 
 	cardsLearnedPerDayQuery := `
 SELECT
-  ROUND(COUNT(DISTINCT c.id) * 1.0 / NULLIF(COUNT(DISTINCT r.day), 0), 1) as cards_learned_per_day
+  COALESCE(ROUND(COUNT(DISTINCT c.id) * 1.0 / NULLIF(COUNT(DISTINCT r.day), 0), 1), 0) as cards_learned_per_day
 FROM review r
 JOIN card c ON r.cardId = c.id
 JOIN card_type ct ON c.cardTypeId = ct.id
@@ -1195,9 +1195,9 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0
 
 	newCardsTimeQuery := `
 SELECT
-  SUM(r.duration) as total_time_seconds,
+  COALESCE(SUM(r.duration), 0) as total_time_seconds,
   COUNT(*) as review_count,
-  ROUND(AVG(r.duration), 1) as avg_time_seconds
+  COALESCE(ROUND(AVG(r.duration), 1), 0) as avg_time_seconds
 FROM review r
 JOIN card c ON r.cardId = c.id
 JOIN card_type ct ON c.cardTypeId = ct.id
@@ -1206,9 +1206,9 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type = 0`
 
 	reviewsTimeQuery := `
 SELECT
-  SUM(r.duration) as total_time_seconds,
+  COALESCE(SUM(r.duration), 0) as total_time_seconds,
   COUNT(*) as review_count,
-  ROUND(AVG(r.duration), 1) as avg_time_seconds
+  COALESCE(ROUND(AVG(r.duration), 1), 0) as avg_time_seconds
 FROM review r
 JOIN card c ON r.cardId = c.id
 JOIN card_type ct ON c.cardTypeId = ct.id
