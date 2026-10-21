@@ -168,6 +168,7 @@ func realMain(logger *slog.Logger) error {
 	v1.HandleFunc("GET /stats/schedule", chainMiddlewares(app.handleSchedule, app.authMiddleware))
 	v1.HandleFunc("GET /stats/intervals", chainMiddlewares(app.handleIntervalStats, app.authMiddleware))
 	v1.HandleFunc("GET /stats/study", chainMiddlewares(app.handleStudyStats, app.authMiddleware))
+	v1.HandleFunc("GET /stats/streak", chainMiddlewares(app.handleStreak, app.authMiddleware))
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", v1))
 
 	dev := http.NewServeMux()

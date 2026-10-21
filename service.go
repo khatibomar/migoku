@@ -442,6 +442,26 @@ type StudyStats struct {
 	AvgTimeReviewSeconds     float64 `json:"avg_time_review_seconds"`
 }
 
+// StreakStats describes consecutive-day study streaks derived from the review
+// history of a language (and optional deck).
+//
+// A "study day" is any calendar day (Migaku absolute day number) with at least
+// one non-deleted review, matching the definition used by GetStudyStats.
+//
+// CurrentStreakDays counts back from the most recent study day. It stays alive
+// while the most recent study day is today or the day before, so a streak is
+// not reported as broken simply because today's session has not started yet.
+type StreakStats struct {
+	CurrentStreakDays  int  `json:"current_streak_days"`
+	LongestStreakDays  int  `json:"longest_streak_days"`
+	TotalStudyDays     int  `json:"total_study_days"`
+	CurrentStreakStart *int `json:"current_streak_start"`
+	CurrentStreakEnd   *int `json:"current_streak_end"`
+	LongestStreakStart *int `json:"longest_streak_start"`
+	LongestStreakEnd   *int `json:"longest_streak_end"`
+	LastStudyDay       *int `json:"last_study_day"`
+}
+
 const msPerDay = int64(24 * 60 * 60 * 1000)
 
 func (s *MigakuService) GetWordStats(ctx context.Context, client *MigakuClient, lang, deckID string) (*WordStats, error) {
@@ -1437,4 +1457,118 @@ WHERE ct.lang = ? AND r.day BETWEEN ? AND ? AND r.del = 0 AND r.type IN (1, 2)`
 
 	s.cache.Set(cacheKey, stats)
 	return stats, nil
+}
+
+// GetStreak computes current and longest study streaks for a language, with an
+// optional deck filter. It reuses the same "study day" definition as
+// GetStudyStats: a day with at least one non-deleted review.
+//
+// Study days are counted from the review table only. The Migaku SRS also records
+// app-activity days in keyValue under '<lang>.study.summary.cummulative.v6.<day>',
+// which can include a day with zero reviews; those are intentionally ignored so
+// this endpoint stays consistent with days_studied.
+func (s *MigakuService) GetStreak(
+	ctx context.Context, client *MigakuClient, lang, deckID string,
+) (*StreakStats, error) {
+	if lang == "" {
+		return nil, errors.New("lang parameter is required")
+	}
+
+	cacheKey := s.scopedCacheKey(client, fmt.Sprintf("stats:streak:%s:%s", lang, deckID))
+	if cached, ok := s.cache.Get(cacheKey); ok {
+		if st, ok := cached.(*StreakStats); ok {
+			return st, nil
+		}
+	}
+
+	query := `
+SELECT DISTINCT r.day
+FROM review r
+JOIN card c ON r.cardId = c.id
+JOIN card_type ct ON c.cardTypeId = ct.id
+WHERE ct.lang = ? AND r.del = 0`
+	params := []any{lang}
+
+	if deckID != "" && deckID != cacheAllKey {
+		query += deckIDClause
+		params = append(params, deckID)
+	}
+	query += `
+ORDER BY r.day ASC;`
+
+	type dayRow struct {
+		Day int `db:"day"`
+	}
+
+	rows, err := runQuery[dayRow](ctx, client, query, params...)
+	if err != nil {
+		return nil, err
+	}
+
+	days := make([]int, 0, len(rows))
+	for _, row := range rows {
+		days = append(days, row.Day)
+	}
+
+	_, todayNumber := resolveStudyDay(ctx, client)
+	stats := computeStreakStats(days, todayNumber)
+	s.cache.Set(cacheKey, stats)
+	return stats, nil
+}
+
+// computeStreakStats derives streak information from distinct study day numbers,
+// which need not be sorted. todayNumber is the current absolute study day.
+//
+// The current streak stays alive while the most recent study day is today or the
+// day before, so a session that has not started yet does not report the streak
+// as broken.
+func computeStreakStats(days []int, todayNumber int) *StreakStats {
+	stats := &StreakStats{TotalStudyDays: len(days)}
+	if len(days) == 0 {
+		return stats
+	}
+
+	sorted := make([]int, len(days))
+	copy(sorted, days)
+	sort.Ints(sorted)
+
+	last := sorted[len(sorted)-1]
+	stats.LastStudyDay = &last
+
+	// Single pass over the sorted days, tracking each consecutive run.
+	runStart := sorted[0]
+	bestStart, bestLength := sorted[0], 1
+	for i := 1; i <= len(sorted); i++ {
+		if i < len(sorted) && sorted[i] == sorted[i-1]+1 {
+			continue
+		}
+		runEnd := sorted[i-1]
+
+		length := runEnd - runStart + 1
+		if length > bestLength {
+			bestStart, bestLength = runStart, length
+		}
+
+		// The run ending at the most recent study day is the current streak.
+		if runEnd == last {
+			alive := last == todayNumber || last == todayNumber-1
+			start := runStart
+			stats.CurrentStreakStart = &start
+			stats.CurrentStreakEnd = &runEnd
+			if alive {
+				stats.CurrentStreakDays = length
+			}
+		}
+
+		if i < len(sorted) {
+			runStart = sorted[i]
+		}
+	}
+
+	bestEnd := bestStart + bestLength - 1
+	stats.LongestStreakDays = bestLength
+	stats.LongestStreakStart = &bestStart
+	stats.LongestStreakEnd = &bestEnd
+
+	return stats
 }

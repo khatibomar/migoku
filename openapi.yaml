@@ -401,6 +401,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StudyStats"
+  /api/v1/stats/streak:
+    get:
+      tags: [Stats]
+      summary: Get current and longest study streaks
+      description: |
+        Computes consecutive-day study streaks for a language. A "study day" is
+        any day with at least one non-deleted review, matching `days_studied`
+        from `/stats/study`. The current streak stays alive while the most
+        recent study day is today or the day before.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: lang
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: deckId
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Streak statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreakStats"
   /dev/status:
     get:
       tags: [Dev]
@@ -720,6 +748,38 @@ components:
         avg_time_review_seconds:
           type: number
           format: float
+    StreakStats:
+      type: object
+      properties:
+        current_streak_days:
+          type: integer
+          description: Consecutive study days ending at the most recent study day, kept alive through yesterday.
+        longest_streak_days:
+          type: integer
+          description: Longest run of consecutive study days ever recorded.
+        total_study_days:
+          type: integer
+          description: Total distinct days with at least one review.
+        current_streak_start:
+          type: integer
+          nullable: true
+          description: Absolute Migaku day number where the current run starts.
+        current_streak_end:
+          type: integer
+          nullable: true
+          description: Absolute Migaku day number where the current run ends.
+        longest_streak_start:
+          type: integer
+          nullable: true
+          description: Absolute Migaku day number where the longest run starts.
+        longest_streak_end:
+          type: integer
+          nullable: true
+          description: Absolute Migaku day number where the longest run ends.
+        last_study_day:
+          type: integer
+          nullable: true
+          description: Most recent day with a review.
     DevStatus:
       type: object
       properties:

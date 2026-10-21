@@ -436,6 +436,29 @@ func (app *Application) handleStudyStats(w http.ResponseWriter, r *http.Request)
 	app.respondJSON(w, r, stats)
 }
 
+func (app *Application) handleStreak(w http.ResponseWriter, r *http.Request) {
+	client, ok := app.requireClient(w, r)
+	if !ok {
+		return
+	}
+
+	lang := r.URL.Query().Get("lang")
+	if lang == "" {
+		app.writeJSONError(w, r, http.StatusBadRequest, "lang is required")
+		return
+	}
+
+	deckID := r.URL.Query().Get("deckId")
+
+	stats, err := app.service.GetStreak(r.Context(), client, lang, deckID)
+	if err != nil {
+		app.logger.Error("Failed to get streak stats", slog.String("error", err.Error()))
+		app.writeJSONError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	app.respondJSON(w, r, stats)
+}
+
 func (app *Application) handleStatus(w http.ResponseWriter, r *http.Request) {
 	app.respondJSON(w, r, map[string]any{
 		"status":    "running",
