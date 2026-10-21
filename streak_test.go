@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"io"
 	"log/slog"
 	"path/filepath"
 	"testing"
@@ -174,7 +173,7 @@ CREATE TABLE review (id INTEGER PRIMARY KEY, cardId INTEGER, day INTEGER, del IN
 		db:     db,
 		dbPath: path,
 		key:    "test",
-		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		logger: slog.New(slog.DiscardHandler),
 	}
 }
 
@@ -188,7 +187,7 @@ func TestGetStreakIntegration(t *testing.T) {
 
 	// 30-day run long ago, then a gap, then the last 4 days ending today.
 	days := make([]int, 0, 34)
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		days = append(days, todayNum-100+i)
 	}
 	for i := 3; i >= 0; i-- {

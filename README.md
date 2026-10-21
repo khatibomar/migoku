@@ -16,7 +16,11 @@ Like words you are learning and their metadata, etc...
 At the moment of writing this project, Migaku doesn't officially support a way to access our own statistics through an API.
 So that's why I built this project as a way to have an API that we can build cool things with it, like
 
-<img width="559" height="869" alt="Image" src="https://github.com/user-attachments/assets/01ab7c28-0eb3-453f-84e5-a1e149640f4e" />
+| Image 1 | Image 2 |
+| :---: | :---: |
+| <img src="https://github.com/user-attachments/assets/01ab7c28-0eb3-453f-84e5-a1e149640f4e" width="100%"> | <img src="https://github.com/user-attachments/assets/274c8688-0184-44d7-8673-840b9d3d5751" width="100%"> |
+| **Image 3** | **Image 4** |
+| <img src="https://github.com/user-attachments/assets/1e769ac1-ad6f-400e-8255-9946efab19fb" width="100%"> | <img src="https://github.com/user-attachments/assets/397174d4-a0c2-46f0-ac33-c94b2a85e5e5" width="100%"> |
 
 ## Prerequisites
 

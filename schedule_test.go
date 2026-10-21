@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"io"
 	"log/slog"
 	"path/filepath"
 	"testing"
@@ -78,7 +77,7 @@ CREATE TABLE deck (
 		db:     db,
 		dbPath: path,
 		key:    "test",
-		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		logger: slog.New(slog.DiscardHandler),
 	}
 }
 
@@ -267,7 +266,7 @@ func TestScheduleSeparatesNewCardsFromReviews(t *testing.T) {
 		{due: 0, interval: 0, reviewCount: 0},            // never studied
 		{due: 0, interval: 0, reviewCount: 0},            // never studied
 	})
-	setDeckNewBatchMax(t, client, 1, 12)
+	setDeckNewBatchMax(t, client)
 
 	schedule, err := testService().GetSchedule(context.Background(), client, "ja", "", 7)
 	if err != nil {
@@ -300,14 +299,14 @@ func TestScheduleCapsNewCardsByDeckBatch(t *testing.T) {
 	}
 
 	client := buildTestClient(t, today.Format("2006-01-02"), cards)
-	setDeckNewBatchMax(t, client, 1, 12)
+	setDeckNewBatchMax(t, client)
 
 	schedule, err := testService().GetSchedule(context.Background(), client, "ja", "", 7)
 	if err != nil {
 		t.Fatalf("GetSchedule: %v", err)
 	}
-	if schedule.NewCards != 12 {
-		t.Errorf("new_cards = %d, want 12 (120 waiting, batch cap 12)", schedule.NewCards)
+	if schedule.NewCards != testNewBatchMax {
+		t.Errorf("new_cards = %d, want %d (120 waiting, batch cap %d)", schedule.NewCards, testNewBatchMax, testNewBatchMax)
 	}
 }
 
@@ -322,7 +321,7 @@ func TestScheduleReviewsExcludeNewCards(t *testing.T) {
 		{due: todayNum - 1, interval: 3, reviewCount: 1}, // yesterday's backlog
 		{due: 0, interval: 0, reviewCount: 0},            // new
 	})
-	setDeckNewBatchMax(t, client, 1, 12)
+	setDeckNewBatchMax(t, client)
 
 	schedule, err := testService().GetSchedule(context.Background(), client, "ja", "", 7)
 	if err != nil {
@@ -350,7 +349,7 @@ func TestScheduleBacklogIsLastSRSDayOnly(t *testing.T) {
 		{due: todayNum - 1, interval: 1, reviewCount: 2},   // yesterday's backlog
 		{due: todayNum - 400, interval: 1, reviewCount: 1}, // abandoned months ago
 	})
-	setDeckNewBatchMax(t, client, 1, 12)
+	setDeckNewBatchMax(t, client)
 
 	schedule, err := testService().GetSchedule(context.Background(), client, "ja", "", 7)
 	if err != nil {
@@ -378,7 +377,7 @@ func TestScheduleCapsNewCardsByActiveDecks(t *testing.T) {
 		{due: 0, interval: 0, reviewCount: 0},
 		{due: 0, interval: 0, reviewCount: 0},
 	})
-	setDeckNewBatchMax(t, client, 1, 12)
+	setDeckNewBatchMax(t, client)
 
 	if _, err := client.db.Exec(
 		`INSERT INTO deck (id, lang, newBatchMax, del) VALUES (2, 'ja', 10, 0), (3, 'ja', 12, 0)`,
@@ -396,12 +395,15 @@ func TestScheduleCapsNewCardsByActiveDecks(t *testing.T) {
 	}
 }
 
-// setDeckNewBatchMax points the test deck at a per-session new-card cap.
-func setDeckNewBatchMax(t *testing.T, client *MigakuClient, deckID, newBatchMax int) {
+// testNewBatchMax is the per-session new-card cap the tests configure.
+const testNewBatchMax = 12
+
+// setDeckNewBatchMax points the test deck at the configured per-session new-card cap.
+func setDeckNewBatchMax(t *testing.T, client *MigakuClient) {
 	t.Helper()
 	if _, err := client.db.Exec(
 		`UPDATE deck SET newBatchMax = ? WHERE id = ?`,
-		newBatchMax, deckID,
+		testNewBatchMax, 1,
 	); err != nil {
 		t.Fatalf("set newBatchMax: %v", err)
 	}
