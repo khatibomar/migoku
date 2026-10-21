@@ -9,8 +9,8 @@ import (
 
 func TestRenderTemplate(t *testing.T) {
 	counts := map[string]langCount{
-		"ja": {known: 1200, learning: 300},
-		"en": {known: 5500, learning: 50},
+		"ja": {known: 1200, learning: 300, streak: 42},
+		"en": {known: 5500, learning: 50, streak: 7},
 	}
 
 	tests := []struct {
@@ -47,6 +47,20 @@ func TestRenderTemplate(t *testing.T) {
 			userName:    "Ayn",
 			defaultLang: "ja",
 			expected:    "Total: 1.5k (300 learning)",
+		},
+		{
+			name:        "streak placeholder",
+			tmpl:        "{name} | {emoji}{lang} {known} 🔥{streak}",
+			userName:    "Ayn",
+			defaultLang: "ja",
+			expected:    "Ayn | 🇯🇵JA 1.2k 🔥42",
+		},
+		{
+			name:        "streak per language",
+			tmpl:        "{ja}🔥{streak} | {en}🔥{streak}",
+			userName:    "Ayn",
+			defaultLang: "ja",
+			expected:    "🔥42 | 🔥7",
 		},
 	}
 
@@ -116,6 +130,37 @@ func TestFetchWordCounts(t *testing.T) {
 	}
 	if known != 1500 || learning != 250 {
 		t.Errorf("got known=%d, learning=%d; want 1500, 250", known, learning)
+	}
+}
+
+func TestFetchStreak(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Api-Key") != "my-key" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if r.URL.Path != "/api/v1/stats/streak" || r.URL.Query().Get("lang") != "ja" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(StreakStats{CurrentStreakDays: 42})
+	}))
+	defer server.Close()
+
+	streak, err := fetchStreak(server.URL, "my-key", "ja")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if streak != 42 {
+		t.Errorf("got streak=%d, want 42", streak)
+	}
+}
+
+func TestStreakIsNotALangCode(t *testing.T) {
+	langs := getEffectiveLangs("{name} | {emoji}{lang} {known} 🔥{streak}", "ja")
+	if len(langs) != 1 || langs[0] != "ja" {
+		t.Errorf("got %v, want ['ja']", langs)
 	}
 }
 

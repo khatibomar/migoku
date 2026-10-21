@@ -117,6 +117,7 @@ If configuring manually (e.g. for a headless remote server):
 | `{known}` | Known word count (formatted as `1.2k` or `1M`) |
 | `{learning}` | Learning word count |
 | `{total}` | Known + Learning total |
+| `{streak}` | Current study streak in days (from `/api/v1/stats/streak`; fetched only when the template uses it) |
 | `{ja}`, `{zh}`, `{en}`, etc. | Switches the current language for subsequent tokens |
 
 ### Examples
@@ -126,6 +127,8 @@ If configuring manually (e.g. for a headless remote server):
 | `{name} \| {emoji}{lang} {known}` | `Ayn \| 🇯🇵JA 1.2k` |
 | `{emoji}{lang} 🎓 {known}/{total}` | `🇯🇵JA 🎓 1.2k/1.5k` |
 | `📖 {learning} ✅ {known}` | `📖 56 ✅ 1.2k` |
+| `{name} \| 🔥 {streak}d` | `Ayn \| 🔥 42d` |
+| `{ja}{emoji}{lang} {known} 🔥{streak}` | `🇯🇵JA 1.2k 🔥42` |
 | `{ja}{emoji}{lang} {known} {en}{emoji}{lang} {known}` | `🇯🇵JA 1.2k 🇺🇸EN 5.7k` |
 | `{name} \| {de}{emoji}{lang} {total} · {ja}{emoji}{lang} {total}` | `Ayn \| 🇩🇪DE 890 · 🇯🇵JA 1.5k` |
 

@@ -59,6 +59,11 @@ type StatusCounts struct {
 	IgnoredCount  int `json:"ignored_count"`
 }
 
+// StreakStats mirrors the subset of the Migoku streak payload we render.
+type StreakStats struct {
+	CurrentStreakDays int `json:"current_streak_days"`
+}
+
 type DiscordGuild struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -361,7 +366,7 @@ func runSetup(initialCfg *Config, configPath string) *Config {
 
 	for {
 		fmt.Printf("Nickname template [%s]:\n", cfg.NickTemplate)
-		fmt.Println("  Placeholders: {name} {emoji} {lang} {known} {learning} {total}")
+		fmt.Println("  Placeholders: {name} {emoji} {lang} {known} {learning} {total} {streak}")
 		fmt.Println("  Use language codes (e.g. {ja} {en}) in the template to switch languages")
 		if input := readLine(reader); input != "" {
 			cfg.NickTemplate = input
@@ -394,10 +399,12 @@ func maskSecret(s string) string {
 type langCount struct {
 	known    int
 	learning int
+	streak   int
 }
 
 func updateNickname(cfg *Config) error {
 	langCodes := getEffectiveLangs(cfg.NickTemplate, cfg.DefaultLang)
+	wantStreak := strings.Contains(cfg.NickTemplate, "{streak}")
 
 	langCounts := make(map[string]langCount, len(langCodes))
 	seen := make(map[string]bool)
@@ -411,7 +418,17 @@ func updateNickname(cfg *Config) error {
 		if err != nil {
 			return fmt.Errorf("fetch word counts for %s: %w", lc, err)
 		}
-		langCounts[lc] = langCount{known, learning}
+		counts := langCount{known: known, learning: learning}
+
+		if wantStreak {
+			streak, err := fetchStreak(cfg.MigokuURL, cfg.MigokuKey, lc)
+			if err != nil {
+				return fmt.Errorf("fetch streak for %s: %w", lc, err)
+			}
+			counts.streak = streak
+		}
+
+		langCounts[lc] = counts
 	}
 
 	newNick := renderTemplate(cfg.NickTemplate, cfg.DiscordName, cfg.DefaultLang, langCounts)
@@ -454,7 +471,7 @@ func getEffectiveLangs(tmpl, defaultLang string) []string {
 func extractLangCodes(tmpl string) []string {
 	knownPH := map[string]bool{
 		"name": true, "emoji": true, "lang": true,
-		"known": true, "learning": true, "total": true,
+		"known": true, "learning": true, "total": true, "streak": true,
 	}
 	var langs []string
 	seen := map[string]bool{}
@@ -520,6 +537,10 @@ func renderTemplate(tmpl, name, defaultLang string, langCounts map[string]langCo
 			if c, ok := langCounts[currentLang]; ok {
 				out.WriteString(formatInt(c.known + c.learning))
 			}
+		case "streak":
+			if c, ok := langCounts[currentLang]; ok {
+				out.WriteString(strconv.Itoa(c.streak))
+			}
 		default:
 			if _, ok := langCounts[token]; ok {
 				currentLang = token
@@ -536,26 +557,29 @@ func renderTemplate(tmpl, name, defaultLang string, langCounts map[string]langCo
 	return out.String()
 }
 
-func fetchWordCounts(migokuURL, apiKey, lang string) (known, learning int, err error) {
-	endpoint := fmt.Sprintf("%s/api/v1/status/counts?lang=%s", strings.TrimRight(migokuURL, "/"), lang)
+func fetchMigokuJSON(migokuURL, apiKey, pathQuery string, out any) error {
+	endpoint := strings.TrimRight(migokuURL, "/") + pathQuery
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, endpoint, nil)
 	if err != nil {
-		return 0, 0, err
+		return err
 	}
 	req.Header.Set("X-Api-Key", apiKey)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return 0, 0, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return 0, 0, fmt.Errorf("migoku returned HTTP %d", resp.StatusCode)
+		return fmt.Errorf("migoku returned HTTP %d", resp.StatusCode)
 	}
+	return json.NewDecoder(resp.Body).Decode(out)
+}
 
+func fetchWordCounts(migokuURL, apiKey, lang string) (known, learning int, err error) {
 	var counts []StatusCounts
-	if err := json.NewDecoder(resp.Body).Decode(&counts); err != nil {
+	if err := fetchMigokuJSON(migokuURL, apiKey, fmt.Sprintf("/api/v1/status/counts?lang=%s", lang), &counts); err != nil {
 		return 0, 0, err
 	}
 
@@ -563,6 +587,16 @@ func fetchWordCounts(migokuURL, apiKey, lang string) (known, learning int, err e
 		return counts[0].KnownCount, counts[0].LearningCount, nil
 	}
 	return 0, 0, nil
+}
+
+// fetchStreak returns the current study streak in days for a language, from
+// GET /api/v1/stats/streak.
+func fetchStreak(migokuURL, apiKey, lang string) (int, error) {
+	var stats StreakStats
+	if err := fetchMigokuJSON(migokuURL, apiKey, fmt.Sprintf("/api/v1/stats/streak?lang=%s", lang), &stats); err != nil {
+		return 0, err
+	}
+	return stats.CurrentStreakDays, nil
 }
 
 func setDiscordHeaders(req *http.Request, token string) {
