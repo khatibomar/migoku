@@ -16,11 +16,11 @@ Like words you are learning and their metadata, etc...
 At the moment of writing this project, Migaku doesn't officially support a way to access our own statistics through an API.
 So that's why I built this project as a way to have an API that we can build cool things with it, like
 
-| Image 1 | Image 2 |
-| :---: | :---: |
-| <img src="https://github.com/user-attachments/assets/01ab7c28-0eb3-453f-84e5-a1e149640f4e" width="100%"> | <img src="https://github.com/user-attachments/assets/274c8688-0184-44d7-8673-840b9d3d5751" width="100%"> |
-| **Image 3** | **Image 4** |
-| <img src="https://github.com/user-attachments/assets/1e769ac1-ad6f-400e-8255-9946efab19fb" width="100%"> | <img src="https://github.com/user-attachments/assets/397174d4-a0c2-46f0-ac33-c94b2a85e5e5" width="100%"> |
+| Notification | Widget |
+| ----- | ----- |
+| <img src="https://github.com/user-attachments/assets/5c77fb72-8595-48fa-9a2b-beb60444188a" width="100%"> | <img src="https://github.com/user-attachments/assets/24daad66-623b-4d59-8f27-cff6d43f81cf" width="100%"> |
+| **hard words AI helper** | **site badge** |
+| <img src="https://github.com/user-attachments/assets/5f5f4b73-0e72-4b27-9809-1e303fa5f1f8" width="100%"> | <img src="https://github.com/user-attachments/assets/aeed4670-03e4-497b-b518-592b13d5b185" width="100%"> |
 
 ## Prerequisites
 
