@@ -17,6 +17,11 @@ Because the artwork *is* that gradient, the two layers meet without a seam.
 Legacy PNGs (ic_launcher.png / ic_launcher_round.png) are generated too, for
 launchers and the widget picker that do not use adaptive icons.
 
+The notification small icon is generated too: Android masks small icons to a
+white silhouette and tints them itself, so the colours cannot survive. What can
+survive is the shape, so ic_notification.png is the character keyed out of its
+gradient background, drawn in opaque white on transparency.
+
 Usage:  python3 generate-icons.py [--source assets/migaku-icon.png]
 """
 
@@ -35,6 +40,15 @@ SAFE_DP = 66
 LEGACY_DP = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
 # Adaptive layer sizes per density bucket (108dp).
 CANVAS_PX = {"mdpi": 108, "hdpi": 162, "xhdpi": 216, "xxhdpi": 324, "xxxhdpi": 432}
+# Notification small icon sizes per density bucket (24dp).
+NOTIF_PX = {"mdpi": 24, "hdpi": 36, "xhdpi": 48, "xxhdpi": 72, "xxxhdpi": 96}
+
+# RGB distance from the modelled background below which a pixel counts as
+# background and above which it counts as character. The distance histogram is
+# strongly bimodal - background sits under ~40, the character starts around
+# ~150 - so everything in between is the artwork's own anti-aliased edge.
+SILHOUETTE_BG = 40.0
+SILHOUETTE_FG = 120.0
 
 
 def fit_background(pixels):
@@ -91,6 +105,37 @@ def legacy_icon(art, size, round_icon=False):
     return icon
 
 
+def background_distance(pixels, coefficients):
+    """Per-pixel RGB distance from the modelled gradient background."""
+    h, w, _ = pixels.shape
+    ys, xs = np.mgrid[0:h, 0:w]
+    predicted = np.stack(
+        [c[0] + c[1] * xs + c[2] * ys + c[3] * xs * ys for c in coefficients],
+        axis=-1,
+    )
+    return np.linalg.norm(pixels[..., :3] - predicted, axis=-1)
+
+
+def notification_icon(pixels, coefficients, size):
+    """The character as a white silhouette: the app icon for a status bar.
+
+    Android masks a notification's small icon to a silhouette and tints it
+    itself, so the artwork's colours cannot survive. Keying the character out
+    of its gradient background does survive, and keeps the notification
+    recognisable as this app instead of a generic blob.
+    """
+    distance = background_distance(pixels, coefficients)
+    alpha = np.clip(
+        (distance - SILHOUETTE_BG) / (SILHOUETTE_FG - SILHOUETTE_BG), 0.0, 1.0
+    )
+    mask = Image.fromarray((alpha * 255).astype(np.uint8), "L").resize(
+        (size, size), Image.LANCZOS
+    )
+    icon = Image.new("RGBA", (size, size), (255, 255, 255, 255))
+    icon.putalpha(mask)
+    return icon
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", default="assets/migaku-icon.png")
@@ -121,7 +166,17 @@ def main():
             os.path.join(out_dir, "ic_launcher_round.png")
         )
 
-        print(f"mipmap-{density}: adaptive {canvas_px}x{canvas_px}, legacy {legacy_size}x{legacy_size}")
+        notif_size = NOTIF_PX[density]
+        notif_dir = os.path.join(args.res, f"drawable-{density}")
+        os.makedirs(notif_dir, exist_ok=True)
+        notification_icon(pixels, coefficients, notif_size).save(
+            os.path.join(notif_dir, "ic_notification.png")
+        )
+
+        print(
+            f"mipmap-{density}: adaptive {canvas_px}x{canvas_px}, legacy {legacy_size}x{legacy_size}, "
+            f"notification {notif_size}x{notif_size}"
+        )
 
 
 if __name__ == "__main__":

@@ -653,12 +653,21 @@ components:
           type: integer
         overdue:
           type: integer
-          description: Cards that came due before the forecast window and are still pending
+          description: Cards already studied that came due before today and are still pending
+        reviews:
+          type: integer
+          description: Review cards to study right now (due_today + overdue); never-studied cards are excluded
+        new_cards:
+          type: integer
+          description: Never-studied cards the next session would introduce, capped by each deck's newBatchMax
+        due_now:
+          type: integer
+          description: Cards to study right now (due_today + overdue)
         days:
           type: array
           items:
             $ref: "#/components/schemas/ScheduleDay"
-      required: [language, today, due_today, learning_today, known_today, overdue, days]
+      required: [language, today, due_today, learning_today, known_today, overdue, reviews, new_cards, due_now, days]
     IntervalStats:
       type: object
       properties:

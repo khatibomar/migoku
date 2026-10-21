@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -57,6 +58,10 @@ class WidgetConfigActivity : Activity() {
         etStudyTime.setText(prefs.getString(StudyReminderScheduler.PREF_STUDY_TIME, StudyReminderScheduler.DEFAULT_STUDY_TIME))
         switchReminder.isChecked = StudyReminderScheduler.isEnabled(prefs)
 
+        // First time the widget is configured, ask for the notification
+        // permission up front so the study reminder can post later on.
+        ensureNotificationPermission(prefs)
+
         btnSave.setOnClickListener {
             val serverUrl = etServerUrl.text.toString().trim()
             val apiKey = etApiKey.text.toString().trim()
@@ -88,9 +93,12 @@ class WidgetConfigActivity : Activity() {
                 .putBoolean(StudyReminderScheduler.PREF_REMINDER_ENABLED, reminderEnabled)
                 .apply()
 
-            // Arm (or disarm) the daily study reminder.
-            if (reminderEnabled) {
-                ensureNotificationPermission()
+            // Arm (or disarm) the daily study reminder. The permission itself
+            // is asked once, on first open; if it was declined and the reminder
+            // is being switched on, point the user at system settings instead
+            // of nagging with the dialog a second time.
+            if (reminderEnabled && !notificationsGranted()) {
+                Toast.makeText(this, R.string.toast_notifications_denied, Toast.LENGTH_LONG).show()
             }
             StudyReminderScheduler.scheduleNext(this)
 
@@ -117,21 +125,27 @@ class WidgetConfigActivity : Activity() {
         }
     }
 
+    private fun notificationsGranted(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+
     /**
      * Android 13+ requires an explicit runtime grant before any notification can
-     * be posted. The request is fire-and-forget: the reminder still gets armed
-     * and will simply be silent until the user grants it in system settings.
+     * be posted. It is asked exactly once — the first time the config screen is
+     * opened — and remembered in the widget prefs, so a decline is never followed
+     * by the system dialog again; the user can still grant it in system settings.
      */
-    private fun ensureNotificationPermission() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        val granted = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-        if (!granted) {
-            requestPermissions(
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                REQUEST_POST_NOTIFICATIONS
-            )
-        }
+    private fun ensureNotificationPermission(prefs: SharedPreferences) {
+        if (notificationsGranted()) return
+        if (prefs.getBoolean(PREF_NOTIFICATION_PERMISSION_ASKED, false)) return
+        prefs.edit()
+            .putBoolean(PREF_NOTIFICATION_PERMISSION_ASKED, true)
+            .apply()
+        requestPermissions(
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            REQUEST_POST_NOTIFICATIONS
+        )
     }
 
     override fun onRequestPermissionsResult(
@@ -151,5 +165,8 @@ class WidgetConfigActivity : Activity() {
 
     private companion object {
         const val REQUEST_POST_NOTIFICATIONS = 100
+
+        /** First-open marker so the system permission dialog is shown at most once. */
+        const val PREF_NOTIFICATION_PERMISSION_ASKED = "notification_permission_asked"
     }
 }

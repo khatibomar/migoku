@@ -6,7 +6,7 @@ import java.time.LocalDate
 /**
  * Decides whether the study reminder should fire, using the review forecast.
  *
- * A live fetch is preferred, but a failed one falls back to the count cached by
+ * A live fetch is preferred, but a failed one falls back to the counts cached by
  * the widget's background refresh so a flaky connection cannot silence the
  * reminder.
  */
@@ -19,17 +19,17 @@ object StudyReminderNotifier {
         val lang = prefs.getString("lang", "ja") ?: "ja"
 
         val live = MigokuApiClient.fetchSchedule(serverUrl, apiKey, lang)
-        val (dueToday, overdue) = if (live.isSuccess) {
+        val (reviews, newCards) = if (live.isSuccess) {
             val schedule = live.getOrThrow()
             MigokuWidgetProvider.saveSchedule(prefs, schedule)
-            schedule.dueToday to schedule.overdue
+            schedule.reviews to schedule.newCards
         } else {
             val cached = MigokuWidgetProvider.loadSchedule(prefs) ?: return
             if (cached.date != LocalDate.now().toString()) return
-            cached.dueToday to cached.overdue
+            cached.reviews to cached.newCards
         }
 
-        if (dueToday <= 0 && overdue <= 0) return
-        StudyNotifications.showStudyReminder(context, dueToday, overdue)
+        if (reviews <= 0 && newCards <= 0) return
+        StudyNotifications.showStudyReminder(context, reviews, newCards)
     }
 }

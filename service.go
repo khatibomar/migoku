@@ -643,10 +643,6 @@ const (
 	defaultScheduleDays = 7
 	// maxScheduleDays caps how far ahead a caller may ask for.
 	maxScheduleDays = 90
-	// overdueLookbackDays is how far back overdue cards are counted. SRS due
-	// days are absolute, so a user who has not studied in a while accumulates
-	// cards that are already overdue; those still deserve a reminder.
-	overdueLookbackDays = 60
 )
 
 // dueForecastRow is one bucket of the SRS review forecast.
@@ -666,6 +662,11 @@ type ScheduleDay struct {
 
 // Schedule is the review forecast the widget uses to decide whether there is
 // something to study, and therefore whether to fire a study reminder.
+//
+// Reviews are cards the user has already studied at least once and that are
+// due now (today plus the backlog). NewCards are never-studied cards the next
+// session may introduce, capped by the decks' newBatchMax setting. Migaku
+// keeps new cards at due = 0, so they must not be treated as overdue.
 type Schedule struct {
 	Language      string        `json:"language"`
 	Today         string        `json:"today"`
@@ -673,7 +674,17 @@ type Schedule struct {
 	LearningToday int           `json:"learning_today"`
 	KnownToday    int           `json:"known_today"`
 	Overdue       int           `json:"overdue"`
+	Reviews       int           `json:"reviews"`
+	NewCards      int           `json:"new_cards"`
+	DueNow        int           `json:"due_now"`
 	Days          []ScheduleDay `json:"days"`
+}
+
+// dayNumber converts a date into the SRS absolute day number, which counts
+// days from 2020-01-01.
+func dayNumber(date time.Time) int {
+	epoch := time.Date(2020, time.January, 1, 0, 0, 0, 0, date.Location())
+	return int((date.UnixMilli() - epoch.UnixMilli()) / msPerDay)
 }
 
 // resolveStudyDay returns the SRS "active day" and its absolute day number.
@@ -701,13 +712,14 @@ WHERE key = 'study.activeDay.currentDate';`)
 		}
 	}
 
-	chartStartDate := time.Date(2020, time.January, 1, 0, 0, 0, 0, currentDate.Location())
-	currentDelta := currentDate.UnixMilli() - chartStartDate.UnixMilli()
-	return currentDate, int(currentDelta / msPerDay)
+	return currentDate, dayNumber(currentDate)
 }
 
 // queryDueForecast returns the number of cards due per day in the inclusive
 // range [startDay, endDay], split into learning and known cards.
+//
+// Never-studied cards are excluded: Migaku parks them at due = 0 until a
+// session introduces them, so they are not part of the review calendar.
 func queryDueForecast(
 	ctx context.Context,
 	client *MigakuClient,
@@ -724,7 +736,7 @@ func queryDueForecast(
     COUNT(*) as count
   FROM card c
   JOIN card_type ct ON c.cardTypeId = ct.id
-  WHERE ct.lang = ? AND c.due BETWEEN ? AND ? AND c.del = 0`
+  WHERE ct.lang = ? AND c.due BETWEEN ? AND ? AND c.del = 0 AND c.reviewCount >= 1`
 
 	params := []any{lang, startDay, endDay}
 	if deckID != "" && deckID != cacheAllKey {
@@ -736,9 +748,83 @@ func queryDueForecast(
 	return runQuery[dueForecastRow](ctx, client, query, params...)
 }
 
+// queryNewCardBudget returns how many never-studied cards are waiting for the
+// language and how many of them the next study session should introduce.
+//
+// The allowance comes from the deck's newBatchMax, the per-session cap the user
+// configures in Migaku. When the forecast spans several decks the caps add up,
+// mirroring a session that works through all of them.
+func queryNewCardBudget(
+	ctx context.Context,
+	client *MigakuClient,
+	lang, deckID string,
+) (available, allowance int, err error) {
+	availableQuery := `
+SELECT COUNT(*) AS value
+FROM card c
+JOIN card_type ct ON c.cardTypeId = ct.id
+WHERE ct.lang = ? AND c.del = 0 AND c.reviewCount <= 0`
+	availableParams := []any{lang}
+	if deckID != "" && deckID != cacheAllKey {
+		availableQuery += deckIDClause
+		availableParams = append(availableParams, deckID)
+	}
+
+	allowanceQuery := `
+SELECT COALESCE(SUM(d.newBatchMax), 0) AS value
+FROM deck d
+WHERE d.del = 0 AND d.lang = ?
+  AND EXISTS (
+    SELECT 1
+    FROM card c
+    JOIN card_type ct ON c.cardTypeId = ct.id
+    WHERE c.deckId = d.id AND c.del = 0 AND ct.lang = d.lang
+  )`
+	allowanceParams := []any{lang}
+	if deckID != "" && deckID != cacheAllKey {
+		allowanceQuery += " AND d.id = ?"
+		allowanceParams = append(allowanceParams, deckID)
+	}
+
+	type scalarRow struct {
+		Value int `db:"value" json:"value"`
+	}
+
+	availableRows, err := runQuery[scalarRow](ctx, client, availableQuery, availableParams...)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(availableRows) > 0 {
+		available = availableRows[0].Value
+	}
+
+	allowanceRows, err := runQuery[scalarRow](ctx, client, allowanceQuery, allowanceParams...)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(allowanceRows) > 0 {
+		allowance = allowanceRows[0].Value
+	}
+
+	return available, allowance, nil
+}
+
 // GetSchedule returns the review forecast for the next days days, starting at
-// the SRS active day. It is the read-only counterpart of the study plan the SRS
-// app derives from card due dates; there is no stored schedule to write to.
+// today. It is the read-only counterpart of the study plan the SRS app derives
+// from card due dates; there is no stored schedule to write to.
+//
+// The forecast is anchored on the real calendar date, not on the SRS active
+// day. The active day only advances when the user reviews, and the server
+// downloads a snapshot of the database as it was at the last sync, so for
+// someone who has not studied yet today the snapshot still points at an
+// earlier day. Anchoring on that stale day reports the backlog under the
+// wrong date and makes "due today" come out as zero.
+//
+// Cards that came due before today are counted as overdue, so the total
+// (due_now) is what the user actually has to study. DueNow covers reviews
+// only; never-studied cards are reported separately as new_cards, because the
+// SRS app introduces them through a capped new-card queue rather than through
+// the review calendar.
 func (s *MigakuService) GetSchedule(
 	ctx context.Context,
 	client *MigakuClient,
@@ -762,34 +848,47 @@ func (s *MigakuService) GetSchedule(
 		}
 	}
 
-	currentDate, currentDayNumber := resolveStudyDay(ctx, client)
-	endDayNumber := currentDayNumber + days - 1
+	today := time.Now()
+	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	todayDayNumber := dayNumber(today)
+	endDayNumber := todayDayNumber + days - 1
 
-	// Pull in the days before the active day as well, so overdue cards are
-	// reported separately instead of silently dropped.
-	rows, err := queryDueForecast(
-		ctx, client, lang, deckID,
-		currentDayNumber-overdueLookbackDays, endDayNumber,
-	)
+	// Everything up to the end of the window, so cards that came due while
+	// the user was away are counted instead of silently dropped.
+	rows, err := queryDueForecast(ctx, client, lang, deckID, 0, endDayNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	availableNew, newAllowance, err := queryNewCardBudget(ctx, client, lang, deckID)
 	if err != nil {
 		return nil, err
 	}
 
 	schedule := &Schedule{
 		Language: lang,
-		Today:    currentDate.Format("2006-01-02"),
+		Today:    today.Format("2006-01-02"),
 		Days:     make([]ScheduleDay, 0, days),
+		NewCards: min(availableNew, newAllowance),
 	}
 
 	byDay := make(map[int]ScheduleDay, days)
 	for i := range days {
-		date := currentDate.AddDate(0, 0, i)
-		byDay[currentDayNumber+i] = ScheduleDay{Date: date.Format("2006-01-02")}
+		date := today.AddDate(0, 0, i)
+		byDay[todayDayNumber+i] = ScheduleDay{Date: date.Format("2006-01-02")}
 	}
 
 	for _, row := range rows {
-		if row.Due < currentDayNumber {
+		// Only the last SRS day counts as the review backlog. The SRS active
+		// day advances when the user studies, and the snapshot the server holds
+		// can still point at the previous day, so cards due then are what the
+		// Migaku app itself shows under "to review". Anything older is a card
+		// the user gave up on months ago and would otherwise inflate the count.
+		if row.Due == todayDayNumber-1 {
 			schedule.Overdue += row.Count
+			continue
+		}
+		if row.Due < todayDayNumber {
 			continue
 		}
 
@@ -808,7 +907,7 @@ func (s *MigakuService) GetSchedule(
 	}
 
 	for i := range days {
-		day := byDay[currentDayNumber+i]
+		day := byDay[todayDayNumber+i]
 		schedule.Days = append(schedule.Days, day)
 		if i == 0 {
 			schedule.DueToday = day.DueCount
@@ -816,6 +915,13 @@ func (s *MigakuService) GetSchedule(
 			schedule.KnownToday = day.KnownCount
 		}
 	}
+
+	// What the user has to study right now: the cards due today plus the last
+	// SRS day's backlog that the app still lists as "to review". Never-studied
+	// cards are not counted here; a fresh deck's whole backlog sits at due = 0
+	// and would drown the signal.
+	schedule.DueNow = schedule.DueToday + schedule.Overdue
+	schedule.Reviews = schedule.DueNow
 
 	s.cache.Set(cacheKey, schedule)
 	return schedule, nil

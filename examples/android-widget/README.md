@@ -12,7 +12,7 @@ Included in this directory:
 
 - **Live Japanese Progress**: Fetches your word counts via `GET /api/v1/status/counts?lang=ja`.
 - **Review Forecast**: Fetches how many cards come up per day via `GET /api/v1/stats/schedule?lang=ja` and shows a "N due today" chip on the widget.
-- **Study Reminder**: Fires a notification at the study time you set, but only when cards are actually due.
+- **Study Reminder**: Fires a notification at the study time you set, but only when cards are actually due. It reports how many reviews are waiting and how many new cards the next session would introduce.
 - **Known & Learning Counters**: Highlights words mastered vs words in progress.
 - **Progress Ratio & Bar**: Visual breakdown of your vocabulary progress.
 - **Design Plate + Vector Artwork**: the glass background (sky, Mount Fuji, pagoda, cherry blossoms) is the supplied artwork plate in `res/drawable-nodpi/widget_plate.webp`, with rounded corners and a feathered alpha edge so the widget reads as a sheet of glass over the wallpaper; everything on top of it - hinomaru medallion, metric tiles, chevron, progress bars - is vector.
@@ -56,7 +56,7 @@ examples/android-widget/
 ├── settings.gradle.kts
 ├── build.gradle.kts
 ├── gradle.properties
-├── generate-icons.py                # regenerates res/mipmap-* from the artwork
+├── generate-icons.py                # regenerates res/mipmap-* and the notification icon
 ├── assets/
 │   └── migaku-icon.png              # source artwork for the launcher icon
 └── app/
@@ -74,12 +74,13 @@ examples/android-widget/
             │   ├── MigokuWidgetWorker.kt    # Jetpack WorkManager background worker
             │   ├── StudyReminderScheduler.kt # Daily "time to study" alarm
             │   ├── StudyReminderReceiver.kt  # Alarm receiver, posts the reminder
-            │   ├── StudyReminderNotifier.kt  # Decides whether there is anything due
+            │   ├── StudyReminderNotifier.kt  # Decides whether there is anything waiting
             │   ├── StudyNotifications.kt     # Notification channel + builder
             │   └── WidgetConfigActivity.kt  # Setup screen on widget placement
             └── res/
                 ├── drawable/                # Vector artwork, card surfaces, progress bars
                 ├── drawable-nodpi/          # widget_plate.webp (design background, alpha corners)
+                ├── drawable-*/              # Generated notification small icon (white silhouette)
                 ├── mipmap-anydpi-v26/       # Adaptive launcher icon
                 ├── mipmap-*/                # Generated launcher icon layers per density
                 ├── layout/
@@ -136,6 +137,15 @@ Because the artwork *is* that gradient, the two layers meet without a visible
 seam, and the launcher can then mask the result to any shape (circle,
 squircle, ...). Legacy PNGs are written too, for launchers and the widget
 picker that do not use adaptive icons.
+
+The same run writes `res/drawable-*/ic_notification.png`, the study reminder's
+small icon. Android only ever draws notification icons as a **white
+silhouette** — the system masks and tints them and discards colour — so the
+launcher's gradient cannot survive. What does survive is the shape: the
+character is keyed out of its gradient background and emitted as an opaque
+white silhouette, so the notification reads as this app rather than a generic
+blob. Nothing in `res/` for this icon is hand-maintained; change the artwork
+and re-run the generator.
 
 ### Installing updates (why updates used to be rejected)
 
@@ -216,12 +226,14 @@ Response payload:
 {
   "language": "ja",
   "today": "2026-10-21",
-  "due_today": 42,
-  "learning_today": 32,
-  "known_today": 10,
-  "overdue": 3,
+  "due_today": 14,
+  "learning_today": 14,
+  "known_today": 0,
+  "overdue": 29,
+  "reviews": 43,
+  "new_cards": 12,
   "days": [
-    { "date": "2026-10-21", "due_count": 42, "learning_count": 32, "known_count": 10 },
+    { "date": "2026-10-21", "due_count": 14, "learning_count": 14, "known_count": 0 },
     { "date": "2026-10-22", "due_count": 17, "learning_count": 9, "known_count": 8 }
   ]
 }
@@ -232,6 +244,13 @@ from the `due` day of every card in the SRS database. It is **read-only**: the
 SRS database is a snapshot the server downloads from Migaku, so there is no
 stored study plan to write to. The study *time* is a per-device preference and
 lives in the widget's own storage.
+
+`reviews` is every card the user has already studied and that is due now
+(`due_today + overdue`); `new_cards` is the never-studied queue the next session
+would introduce, capped by the deck's `newBatchMax` setting. The two are
+deliberately separate: Migaku keeps new cards parked at `due = 0`, so counting
+them as part of the review backlog would report thousands of "overdue" cards on
+a deck that has never been studied.
 
 ---
 
@@ -248,11 +267,12 @@ How it works:
 - A daily `AlarmManager` alarm is armed for that time. It re-arms itself after
   every fire, and the widget's background refresh re-arms it too, so it
   survives reboots and app updates.
-- When the alarm fires, the widget asks the API how many cards are due. The
-  notification is only posted when there is actually something to study, so a
-  day with nothing due stays silent.
-- If the network is unavailable at that moment, the count cached by the last
-  successful refresh is used instead.
+- When the alarm fires, the widget asks the API how much is waiting: *N cards to
+  review* plus *M new cards*, where the new-card count is capped by the deck's
+  per-session new-card limit. The notification is only posted when there is
+  actually something to study, so a day with nothing due stays silent.
+- If the network is unavailable at that moment, the counts cached by the last
+  successful refresh are used instead.
 
 Caveats:
 
@@ -260,8 +280,10 @@ Caveats:
   permission on Android 12+, and a study reminder is fine arriving a few
   minutes late. It still fires through Doze.
 - On Android 13+ the app needs the **Notifications** permission. The config
-  screen asks for it when you enable the reminder; if you decline, the reminder
-  stays silent until you grant it in system settings.
+  screen asks for it the first time you open the widget settings (once only,
+  not again on later opens); if you decline, the reminder stays silent until
+  you grant it in system settings — saving with the reminder on reminds you
+  about that.
 - Tapping the notification opens the widget settings so the time can be changed
   without hunting for the widget.
 

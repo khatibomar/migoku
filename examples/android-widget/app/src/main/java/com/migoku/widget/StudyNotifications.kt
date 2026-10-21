@@ -29,19 +29,19 @@ object StudyNotifications {
         manager.createNotificationChannel(channel)
     }
 
-    fun showStudyReminder(context: Context, dueToday: Int, overdue: Int) {
+    fun showStudyReminder(context: Context, reviews: Int, newCards: Int) {
         ensureChannel(context)
 
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         if (!manager.areNotificationsEnabled()) return
 
         val body = buildString {
-            if (dueToday > 0) {
-                append(context.resources.getQuantityString(R.plurals.notification_due_today, dueToday, dueToday))
+            if (reviews > 0) {
+                append(context.resources.getQuantityString(R.plurals.notification_reviews, reviews, reviews))
             }
-            if (overdue > 0) {
+            if (newCards > 0) {
                 if (isNotEmpty()) append(' ')
-                append(context.resources.getQuantityString(R.plurals.notification_overdue, overdue, overdue))
+                append(context.resources.getQuantityString(R.plurals.notification_new_cards, newCards, newCards))
             }
         }
         if (body.isEmpty()) return

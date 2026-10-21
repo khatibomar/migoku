@@ -25,7 +25,9 @@ data class StudyScheduleDay(
 
 /**
  * The review forecast: how many cards come up for review per day, starting at
- * the SRS active day. `dueToday` is what the study reminder is built on.
+ * the SRS active day. `reviews` (studied cards due now) and `newCards` (the
+ * never-studied queue the next session would introduce) are what the study
+ * reminder is built on.
  */
 data class StudySchedule(
     val language: String,
@@ -34,6 +36,8 @@ data class StudySchedule(
     val learningToday: Int,
     val knownToday: Int,
     val overdue: Int,
+    val reviews: Int,
+    val newCards: Int,
     val days: List<StudyScheduleDay>
 )
 
@@ -41,7 +45,9 @@ data class StudySchedule(
 data class CachedSchedule(
     val date: String,
     val dueToday: Int,
-    val overdue: Int
+    val overdue: Int,
+    val reviews: Int,
+    val newCards: Int
 )
 
 /**
@@ -136,6 +142,8 @@ object MigokuApiClient {
                     learningToday = root.optInt("learning_today", 0),
                     knownToday = root.optInt("known_today", 0),
                     overdue = root.optInt("overdue", 0),
+                    reviews = root.optInt("reviews", 0),
+                    newCards = root.optInt("new_cards", 0),
                     days = dayList
                 )
             )

@@ -35,14 +35,14 @@
     <string name="notification_channel_description">Reminds you when it is time to study and cards are due.</string>
     <string name="notification_title">Time to study! がんばろう！</string>
 
-    <plurals name="notification_due_today">
-        <item quantity="one">%d card due today</item>
-        <item quantity="other">%d cards due today</item>
+    <plurals name="notification_reviews">
+        <item quantity="one">%d card to review</item>
+        <item quantity="other">%d cards to review</item>
     </plurals>
 
-    <plurals name="notification_overdue">
-        <item quantity="one">%d card overdue</item>
-        <item quantity="other">%d cards overdue</item>
+    <plurals name="notification_new_cards">
+        <item quantity="one">%d new card</item>
+        <item quantity="other">%d new cards</item>
     </plurals>
 
     <plurals name="widget_due_today">

@@ -79,6 +79,8 @@ class MigokuWidgetProvider : AppWidgetProvider() {
         private const val PREF_SCHEDULE_DATE = "schedule_date"
         private const val PREF_SCHEDULE_DUE = "schedule_due_today"
         private const val PREF_SCHEDULE_OVERDUE = "schedule_overdue"
+        private const val PREF_SCHEDULE_REVIEWS = "schedule_reviews"
+        private const val PREF_SCHEDULE_NEW = "schedule_new_cards"
 
         /**
          * Schedule the background refresh if it is not already scheduled.
@@ -151,16 +153,24 @@ class MigokuWidgetProvider : AppWidgetProvider() {
             prefs.edit()
                 .putInt(PREF_SCHEDULE_DUE, schedule.dueToday)
                 .putInt(PREF_SCHEDULE_OVERDUE, schedule.overdue)
+                .putInt(PREF_SCHEDULE_REVIEWS, schedule.reviews)
+                .putInt(PREF_SCHEDULE_NEW, schedule.newCards)
                 .putString(PREF_SCHEDULE_DATE, LocalDate.now().toString())
                 .apply()
         }
 
         fun loadSchedule(prefs: SharedPreferences): CachedSchedule? {
             val date = prefs.getString(PREF_SCHEDULE_DATE, null) ?: return null
+            val dueToday = prefs.getInt(PREF_SCHEDULE_DUE, 0)
+            val overdue = prefs.getInt(PREF_SCHEDULE_OVERDUE, 0)
             return CachedSchedule(
                 date = date,
-                dueToday = prefs.getInt(PREF_SCHEDULE_DUE, 0),
-                overdue = prefs.getInt(PREF_SCHEDULE_OVERDUE, 0)
+                dueToday = dueToday,
+                overdue = overdue,
+                // Schedules cached by older widget versions have no reviews/new
+                // keys; fall back to the values they did store.
+                reviews = prefs.getInt(PREF_SCHEDULE_REVIEWS, dueToday + overdue),
+                newCards = prefs.getInt(PREF_SCHEDULE_NEW, 0)
             )
         }
 
